@@ -1,0 +1,215 @@
+{
+  "main": {
+    "id": "ecaf3ed8422bb775",
+    "type": "split",
+    "children": [
+      {
+        "id": "73b920a7a9c4702a",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "504150a8898c900e",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "GameDesignDocs/20_Systems/SYS-120_자동타게팅_직사화기.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "SYS-120_자동타게팅_직사화기"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "ed3d28c8fe469bb0",
+    "type": "split",
+    "children": [
+      {
+        "id": "371889cff678fe5e",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "7354610f1f0b8256",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "f919af910ab85e84",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "e8a829c9f72448d4",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "cb97a192a752d3fa",
+    "type": "split",
+    "children": [
+      {
+        "id": "9e4d205580648875",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "44fcc84e3e5434d8",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "GameDesignDocs/20_Systems/SYS-120_자동타게팅_직사화기.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "백링크"
+            }
+          },
+          {
+            "id": "9cc5ac42abb4db21",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "GameDesignDocs/ARCH-100_전투_적성객체_아키텍처.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "나가는 링크"
+            }
+          },
+          {
+            "id": "0eedef0f19bf440b",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "84de66ec80153c94",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "b6f78bc58a22499d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "GameDesignDocs/ARCH-100_전투_적성객체_아키텍처.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "개요"
+            }
+          },
+          {
+            "id": "34f3a96bf8615214",
+            "type": "leaf",
+            "state": {
+              "type": "file-properties",
+              "state": {},
+              "icon": "lucide-info",
+              "title": "파일 속성"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false
+    }
+  },
+  "active": "504150a8898c900e",
+  "lastOpenFiles": [
+    "GameDesignDocs/10_Architecture/ARCH-100_전투_적성객체_아키텍처.md",
+    "GameDesignDocs/00_Project/PRJ-000_프로젝트_통합기획_기준서.md",
+    "GameDesignDocs.zip",
+    "GameDesignDocs/20_Systems/SYS-110_플레이어_기동.md",
+    "GameDesignDocs/20_Systems/SYS-120_자동타게팅_직사화기.md",
+    "GameDesignDocs/90_Archive",
+    "GameDesignDocs/30_World",
+    "GameDesignDocs/20_Systems",
+    "GameDesignDocs/10_Architecture",
+    "GameDesignDocs/00_Project",
+    "90_Inbox",
+    "00_Management"
+  ]
+}
