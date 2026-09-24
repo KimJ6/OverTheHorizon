@@ -3,7 +3,7 @@ document_id: ARCHIVE-SYS-110-PROTOTYPE-0X
 title: 플레이어 기동 Prototype 0.x 운동모델 이력
 document_type: archive
 status: archive
-last_updated: '2026-09-24'
+last_updated: '2026-09-25'
 canonical_replacement: SYS-110
 source_documents:
 - 전술기형_플레이어_운동모델_설계정리_v0.6
@@ -309,6 +309,25 @@ RevectorCorrection
 | 입력 순서 의존 | Command Order Independence |
 
 이 표는 과거 설계를 현재 구현에 다시 도입하기 위한 것이 아니라, **현재 Canon이 어떤 실패를 방지해야 하는지 추적하기 위한 기록**이다.
+
+## 4.1 2026-09-25 현행 Baseline에 의한 재평가
+
+후속 직접 조작 검증에서 통합 3D Command를 사용하는 현행 Flight Prototype의 전체 조작감이 승인되었다.
+
+현행 Baseline은 외형상 Prototype 0.2의 Vector Command와 일부 유사하지만 다음 조건이 다르다.
+
+- Press 횟수에 따른 Burst Authority를 사용하지 않는다.
+- 과거 입력 순서나 Newly Activated Axis를 운동 에너지로 사용하지 않는다.
+- WASDRF 전체 현재 상태를 매 FixedStep 하나의 Command로 합성한다.
+- 복합 입력을 정규화해 축 개수에 따른 속력 증가를 방지한다.
+- 방향 재지정과 ControlledSpeed 가속·감속을 서로 다른 규칙으로 관리한다.
+- ControlledVelocity와 GravityVelocity의 소유권을 분리한다.
+- SteeringReference, CameraView, BodyFacing을 분리한다.
+- 입력 해제 시 마지막 방향을 유지하되 ControlledSpeed와 PropulsionAuthority를 감쇠한다.
+
+따라서 과거의 “Vector Command가 주추력 의미를 약화한다”는 평가는 당시 Prototype의 관찰로 보존하되, 통합 방향 Command 자체를 현재 프로젝트에서 금지하는 근거로 사용하지 않는다.
+
+현재 승인된 규칙과 검증 항목은 `SYS-110 revision 2.0`을 따른다. 이 재평가는 과거 테스트 결과를 삭제하거나 Prototype 0.2를 그대로 복원한다는 의미가 아니다.
 
 ---
 
