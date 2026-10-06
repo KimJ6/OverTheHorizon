@@ -33,59 +33,20 @@ source_documents:
 
 ### 0.1 이 문서가 결정하는 것
 
-본 문서는 개별 무기나 적의 세부 행동이 아니라 여러 전투 시스템이 공통으로 따라야 하는 **Runtime 구조와 책임 경계**를 결정한다.
-
-- Player 상태의 canonical 공유 방식
-- Zone·SpawnSource 기반 Encounter 활성화 구조
-- 적성 객체의 공통 생명주기
-- Hostile Group과 Missile Salvo의 공유 Context 역할
-- 복수 Player 대상 공통 Target Assignment 구조
-- Combat Target Registry와 Spatial Broadphase
-- Attack Ready / Queue / Budget / Permit 구조
-- Hit / Damage / Detonation / Death 처리 순서
-- Host 기반 Gameplay Authority와 최소 결정론 경계
-- ECS 병렬 처리에서의 Stable Commit 원칙
-- Network replication relevance의 기본 원칙
-- Gameplay Simulation과 Visual Presentation의 분리
-- Pooling, allocation, warm-up, 메모리 재사용의 공통 정책
-- 성능 복잡도, Budget, Profiling 및 결정론 검증 기준
+본 문서는 여러 전투 시스템이 공통으로 따라야 하는 **Runtime 구조와 책임 경계**를 결정한다. Encounter 활성화, Group·Salvo 공유 판단, Target·공격·피해 Pipeline, 생명주기와 메모리, Host 권위·Replication, Gameplay·Visual 분리, 성능 Budget과 검증 기준을 소유한다.
 
 ### 0.2 이 문서가 결정하지 않는 것
 
-다음은 각 System 문서 또는 구현 단계가 결정한다.
+플레이어 운동, 무기별 Target Selection, Missile Guidance, 개별 적의 전술·무장·수치는 각 System이 결정한다. Group·Budget·Pool·Simulation LOD의 최종값과 Network·Rendering 구현 경로는 프로파일링과 구현 단계에서 결정한다.
 
-- 플레이어 조작·운동 모델과 기동 모드의 세부 규칙
-- 플레이어 무기의 Target Score와 무기별 Target Selection
-- 미사일 FSM, `MaxSnapAngle`, `TurnRate`, Overshoot/Reacquire 등 Guidance 세부 규칙
-- 드론·함선·고정시설별 전술 FSM과 무장 구성
-- 무기별 실제 사거리, 연사속도, 피해량
-- Group 최대 인원과 각 Budget의 최종 수치
-- 네트워크 라이브러리와 Packet format
-- VAT, Entities Graphics, BRG 등 최종 Rendering 경로
-- 최종 Pool Capacity와 Simulation LOD 전환 거리
+### 0.3 관련 Owner
 
-### 0.3 하위 문서와의 관계
+- 프로젝트 목표와 공통 기술 방향: [PRJ-000](../00_Project/PRJ-000_프로젝트_통합기획_기준서.md)
+- 플레이어 무기의 후보 평가와 Target 선택: [SYS-120](../20_Systems/SYS-120_자동타게팅_직사화기.md)
+- Missile 행동·Guidance·요격·연출: [SYS-130](../20_Systems/SYS-130_미사일_이타노서커스.md)
+- 군도 구획의 Gameplay 의미와 보상·작전 상태: [SYS-160](../20_Systems/SYS-160_군도작전_전방지원.md)
 
-- 플레이어 무기의 후보 평가와 Target 선택은 `SYS-120`이 소유한다.
-- 미사일 행동·Guidance·요격·연출은 `SYS-130`이 소유한다.
-- 군도 구획의 Gameplay 의미와 보상·작전 상태는 `SYS-160`이 소유한다.
-- 본 문서의 `Zone`은 **Encounter Activation / Spawn 단위**이며 군도 작전상의 구획 의미를 소유하지 않는다.
-- 하위 문서는 본 문서의 Registry, Authority, Damage Pipeline, Visual Buffer 정책을 별도로 재정의하지 않는다.
-
-### 0.4 현재 기준과 비채택 기준
-
-- 현재 Gameplay Source of Truth는 **Host**다.
-- `ZoneOwner` 기반 분산 권위는 현재 구현 기준이 아니다.
-- Pooling은 필수 철학이 아니라 churn과 structural change 비용을 측정한 뒤 선택하는 최적화 수단이다.
-- 모든 Client가 동일한 float/Physics 결과를 재현하는 완전 lockstep 결정론은 목표가 아니다.
-- 결정론은 Gameplay 결과가 실행 순서나 container iteration 순서에 흔들리지 않아야 하는 경계에 한정한다.
-
-### 0.5 관련 Canon
-
-- [PRJ-000 프로젝트 통합 기획 기준서](../00_Project/PRJ-000_프로젝트_통합기획_기준서.md)
-- [SYS-120 자동 타게팅·직사 화기](../20_Systems/SYS-120_자동타게팅_직사화기.md)
-- [SYS-130 미사일 — 이타노서커스](../20_Systems/SYS-130_미사일_이타노서커스.md)
-- [SYS-160 군도 작전·전방지원](../20_Systems/SYS-160_군도작전_전방지원.md)
+이 문서의 `Zone`은 Encounter Activation·Spawn 단위다. 군도 작전 구획의 의미를 소유하지 않으며, 하위 System은 공통 Registry·Authority·Damage Pipeline·Visual Buffer를 별도로 재정의하지 않는다.
 
 ---
 
@@ -137,27 +98,9 @@ Visual
 | Client 독립 Hit 판정 | 0 |
 | Query 반환 순서에 의존하는 Gameplay 결과 | 0 |
 
-### 1.3 최적화 우선순위
+ECS, Burst, Jobs를 적용하기 전에 불필요한 판단을 제거하고 대상·빈도를 줄이며 공통 결과를 공유한다. 병렬화는 남은 Hot Data 처리에 사용하고, 반복 시각 작업은 Gameplay와 분리해 GPU 이전을 검토한다.
 
-```text
-1. 불필요한 연산 제거
-        ↓
-2. 계산 대상 수 감소
-        ↓
-3. 계산 빈도 감소
-        ↓
-4. 공통 결과 공유
-        ↓
-5. 고비용 연산량 상한 설정
-        ↓
-6. Hot Data 병렬 처리
-        ↓
-7. 반복 시각 작업 GPU 이전
-```
-
-ECS, Burst, Jobs는 이미 존재하는 연산을 빠르게 실행하는 도구다. 개별 AI 판단이나 Target Search 자체가 불필요하게 수천 번 발생한다면 병렬화만으로는 근본적인 비용을 제거할 수 없다.
-
-### 1.4 Architecture Invariants
+### 1.3 Architecture Invariants
 
 다음 구조가 나타나면 Architecture를 재검토한다.
 
@@ -1329,7 +1272,7 @@ Host
 - Disconnect recovery
 - Cheat trust model
 
-과거 ZoneOwner 설계 자체는 Archive에서만 참조한다.
+과거 ZoneOwner 설계는 현행 요구사항이 아니며, 필요할 때 Git 이력에서 확인한다.
 
 ---
 
@@ -1431,161 +1374,58 @@ Combat Hot Path에서 managed allocation은 `0 B`를 목표로 한다.
 
 ## 14. 성능 복잡도와 Budget
 
-### 14.1 객체별 Hot Path 목표
-
-**Drone**
-
-```text
-Group / TargetPlan read
-+ Steering
-+ Movement
-+ Weapon due state
-```
-
-금지:
-
-```text
-Player Search
-Target Search
-Zone Search
-```
-
-**Missile**
-
-```text
-Salvo TargetSample read
-+ Guidance
-+ Movement
-+ Contact / near-threat logic
-```
-
-금지:
-
-```text
-매 Missile Player prediction
-모든 Missile 간 검사
-```
-
-**Ship / Large Hostile**
-
-```text
-Root Movement
-+ Active Part System
-+ Active Weapon System
-```
-
-Root 개체 수뿐 아니라 활성 Part와 Weapon 수를 별도 비용으로 본다.
-
-**Static Defense**
-
-```text
-Movement = 0
-Due Target / Weapon Evaluation only
-```
-
-### 14.2 시간 복잡도 모델
+### 14.1 시간 복잡도 모델
 
 변수:
 
 ```text
-P  = Player 수, 최대 4
-Z  = 전체 Zone 수
-Kz = Activation 후보 Zone 수
-
-n1 = Active Drone
-n2 = Active Missile
-n3 = Active Ship / Large Hostile
-n4 = Active World Projectile
-n5 = Active Static Hostile
-
-N = n1+n2+n3+n4+n5
-
-G = Hostile Group 수
-S = Missile Salvo 수
-
-Kt = Target Broadphase 후보
-B  = 해당 Tick 실제 Attack Permit
-E  = Commit 대상 Event
-
+P       = Player 수, 최대 4
+n1      = Active Drone
+n2      = Active Missile
+n3      = Active Ship / Large Hostile
+n4      = Active World Projectile
+Nactive = 전체 Active Gameplay Entity
+G       = Hostile Group 수
+S       = Missile Salvo 수
 Nhigh   = 이번 Tick 고빈도 Simulation 개체
 Nmedium = 낮은 빈도로 처리 가능한 개체
 r       = 빈도 감소 비율
+Gdue    = 이번 Tick Target을 평가할 Hostile Group
+Sdue    = 이번 Tick Target을 Sample할 Missile Salvo
+Kz      = Activation 후보 Zone
+Kt      = Target Broadphase 후보
+B       = 이번 Tick 실제 Attack Permit
+Chit    = Attack/Hit 1건 처리 비용
+E       = Commit 대상 Event
 ```
 
 목표 비용은 다음 형태에 가깝게 만든다.
 
 ```text
-Ttick ≈
-O(P)
-+
-O(Nhigh)
-+
-O(Nmedium / r)
-+
-O(Gdue)
-+
-O(Sdue)
-+
-O(Kz)
-+
-O(Kt)
-+
-O(B × Chit)
-+
-O(Ecommit)
+Ttick ≈ O(P)
+       + O(Nhigh)
+       + O(Nmedium / r)
+       + O(Gdue)
+       + O(Sdue)
+       + O(Kz)
+       + O(Kt)
+       + O(B × Chit)
+       + O(E)
 ```
 
-`P ≤ 4`는 사실상 상수로 본다. 대량화 시 지배항은 실제로 움직이는 객체의 `O(Nmoving)`에 가깝게 유지하고 다음 비용을 제거하는 것이 목표다.
+`P ≤ 4`는 사실상 상수로 본다. 대량화 시 지배항은 실제로 움직이거나 상호작용하는 객체 수에 가깝게 유지하고 `O(P × Nactive)`, `O(Nactive²)`, 불필요한 반복 `O(Nactive)`을 피한다.
 
-```text
-O(P × N)
-O(N²)
-불필요한 반복 O(N)
-```
+| 대상 | 목표 비용·처리 | 피해야 할 반복 |
+|---|---|---|
+| Drone | Target 평가 `O(P × n1)`을 Group 단위 `O(P × Gdue)`로 줄이고 개체는 Steering·Movement만 수행 | 개체별 Player·Target·Zone 탐색 |
+| Missile | Target 평가 `O(P × n2)`를 Salvo 단위 `O(P × Sdue)`로 줄이고 개체는 필요한 Guidance·Movement만 수행 | 개체별 Player 예측, Missile 간 전수 검사 |
+| Ship | `O(n3 + activeParts + activeWeapons)`로 Root·활성 Part·Weapon 비용을 분리 | 비활성 Part·Weapon의 상시 처리 |
+| World Projectile | 공간적 존재가 필요한 공격만 `O(n4)` 비용을 지불 | Instant Resolve 가능한 공격의 Entity 생성 |
+| Static Hostile | Movement 없이 due Target·Weapon 평가만 수행 | 매 Tick 전수 평가 |
 
-### 14.3 객체 종류별 복잡도
+Far Simulation LOD와 Salvo virtualization은 Gameplay 상호작용을 훼손하지 않고 실제 비용을 줄일 때만 적용한다.
 
-**Drone**
-
-```text
-Target:
-O(P × n1)
-→ O(P × Gdue)
-
-Movement:
-O(n1_high)
-```
-
-Far Simulation LOD가 유효한 경우 먼 개체는 Group 수준으로 축약할 수 있다.
-
-**Missile**
-
-```text
-Target Sample:
-O(P × n2)
-→ O(P × Sdue)
-
-Guidance / Movement:
-O(n2_near)
-```
-
-Far Salvo virtualization이 Gameplay를 훼손하지 않는다면 일부 먼 상태는 Salvo 단위로 축약할 수 있다.
-
-**Ship**
-
-```text
-O(n3 + activeParts + activeWeapons)
-```
-
-**World Projectile**
-
-실제로 존재해야 하는 Projectile만 `O(n4)` 비용을 지불한다. Instant Resolve를 사용할 수 있는 공격은 `n4` 자체를 줄인다.
-
-**Static Hostile**
-
-Movement 비용 없이 due Target/Weapon 평가만 수행한다.
-
-### 14.4 메모리 복잡도
+### 14.2 메모리 복잡도
 
 기본 메모리 구조는 다음에 비례한다.
 
@@ -1602,7 +1442,7 @@ O(
 
 CPU 최적화를 이유로 지나치게 많은 inactive Entity를 항상 유지하지 않는다. Pool Capacity 역시 peak active 수보다 과도하게 크게 잡지 않는다.
 
-### 14.5 성능 Budget
+### 14.3 성능 Budget
 
 정확한 수치는 프로파일링 후 결정하지만 Architecture는 다음과 같은 상한을 지원해야 한다.
 
@@ -1764,6 +1604,8 @@ Damage / Death Commit
 
 다음 항목은 Architecture의 방향은 정해져 있으나 최종 구현값 또는 전략을 프로파일링으로 결정해야 한다.
 
+현재 문서의 Hz, Budget, Pool Capacity, Simulation LOD 전환값은 프로파일링을 위한 시작값 또는 후보값이다. 명시적으로 확정되지 않은 수치를 최종 Gameplay 요구사항이나 성능 계약으로 취급하지 않는다.
+
 | 항목 | 현재 후보 / 상태 | 검증 기준 |
 |---|---|---|
 | Combat Spatial Index 갱신 | Incremental vs Periodic Rebuild | ECS 메모리 패턴, Cell crossing, rebuild 비용 |
@@ -1775,29 +1617,3 @@ Damage / Death Commit
 | Group 최대 크기 | 미정 | Targeting 비용과 행동 자연스러움 |
 | Snapshot 빈도 | 저빈도 Snapshot + interpolation 후보 | 전송량, correction, 시각 오차 |
 | Rendering 경로 | GPU 이전 원칙만 확정 | 대상 수·플랫폼·프로파일링 결과 |
-
-### 16.1 Prototype 값의 해석
-
-현재 문서의 Hz, Budget, Pool Capacity, Simulation LOD 전환값은 **프로파일링을 위한 시작값 또는 후보값**이다. 명시적으로 확정되지 않은 수치를 최종 Gameplay 요구사항이나 성능 계약으로 취급하지 않는다.
-
-### 16.2 다음 구현 단계
-
-```text
-ARCH-100
-   ↓
-ECS Data Model
-   ↓
-Component / Archetype
-   ↓
-System Query / Update Group
-   ↓
-Event / Buffer
-   ↓
-Spawn / Despawn Lifecycle
-   ↓
-Prototype / Profiler
-   ↓
-Architecture 보정
-```
-
-기능별 Gameplay 요구사항은 해당 `SYS-*` 문서에서 관리한다. 구현 단계에서 공통 Runtime 규칙과 충돌하면 본 문서의 책임 경계를 우선한다.

@@ -11,30 +11,17 @@ source_documents:
 
 # Archive — 플레이어 기동 Prototype 0.x 운동모델 이력
 
-## 0. Archive 계약
+> **Archive:** 현재 구현 요구사항이 아니다. Prototype 0~0.5의 시도·관찰·폐기 이유와 이후 재평가를 보존하며, 현재 기동 규칙은 [SYS-110 플레이어 기동](../20_Systems/SYS-110_플레이어_기동.md)을 따른다.
 
-본 문서는 `SYS-110 플레이어 기동 시스템`이 확정되기 전의 Prototype 진행 과정과 실패 원인을 보존한다.
+## 0. 보존 범위
 
-이 문서는 **현재 구현 요구사항의 Source of Truth가 아니다.**
-
-현재 기동 규칙을 판단할 때는 반드시 `SYS-110`을 우선한다.
-
-이 Archive를 참조하는 목적은 다음으로 제한한다.
-
-- 과거 Prototype이 왜 폐기되었는지 확인
-- 동일한 구조적 문제의 재발 방지
-- Control Law 변경의 설계 근거 추적
-- 과거 구현과 현재 Canon 비교
-
-### 0.1 Canonical replacement
-
-- [SYS-110 플레이어 기동](../20_Systems/SYS-110_플레이어_기동.md)
+이 문서는 과거 Prototype의 폐기 이유, 구조적 문제의 재발 방지, Control Law 변경 근거와 현재 Canon의 차이를 확인할 때만 사용한다.
 
 ---
 
-# 1. Prototype 진행 이력
+## 1. 당시 Prototype 진행과 관찰
 
-## 1.1 Prototype 0 — Assisted Rigidbody / AddForce
+### 1.1 Prototype 0 — Assisted Rigidbody / AddForce
 
 기본 AddForce 기반 assisted Rigidbody 방식을 사용했다.
 
@@ -46,7 +33,7 @@ source_documents:
 
 이 단계에서 단순 물리 가속만으로는 목표한 전술기형 고권한 기동을 만들기 어렵다는 문제가 드러났다.
 
-## 1.2 Prototype 0.2 — Vector Command
+### 1.2 Prototype 0.2 — Vector Command
 
 WASDRF 입력으로 Desired Direction을 만들고 전체 Velocity 방향을 적극적으로 회전하는 구조를 사용했다.
 
@@ -72,7 +59,7 @@ Vector3.RotateTowards(
 - Main Propulsion의 존재감이 사라짐
 - 전체 Velocity를 직접 지배해 캐릭터 컨트롤러에 가까워짐
 
-## 1.3 Prototype 0.3 — Main + Maneuver 초기 분리
+### 1.3 Prototype 0.3 — Main + Maneuver 초기 분리
 
 Main과 Maneuver를 분리하려 했지만 실제 계산에서는 다시 하나의 Desired Velocity로 합쳐졌다.
 
@@ -82,7 +69,7 @@ Main과 Maneuver를 분리하려 했지만 실제 계산에서는 다시 하나�
 - Redirect 단계가 전체 `linearVelocity`를 직접 수정
 - 관성과 추진의 역할이 모호함
 
-## 1.4 Prototype 0.4 — Transient / Sustain
+### 1.4 Prototype 0.4 — Transient / Sustain
 
 Transient 단계에서 전체 Velocity를 빠르게 재지향하고 이후 Sustain 단계에서 ΔV를 적용하는 구조였다.
 
@@ -92,7 +79,7 @@ Transient 단계에서 전체 Velocity를 빠르게 재지향하고 이후 Susta
 - 기동 이벤트가 운동 상태를 영구적으로 바꿈
 - KeyDown 이벤트 중심의 운동 설계가 됨
 
-## 1.5 Prototype 0.5 — Persistent + FCS-owned Controlled Motion
+### 1.5 Prototype 0.5 — Persistent + FCS-owned Controlled Motion
 
 다음 상태를 분리했다.
 
@@ -115,9 +102,9 @@ PersistentVelocity
 
 ---
 
-# 2. Prototype 0.5의 핵심 실패 원인
+## 2. Prototype 0.5에서 관찰한 실패 원인
 
-## 2.1 Revector가 사실상 Velocity Lerp
+### 2.1 Revector가 사실상 Velocity Lerp
 
 Revector가 다음 형태이면:
 
@@ -145,7 +132,7 @@ Authority가 시간에 따라 감소하면:
 
 으로 끌려간다.
 
-## 2.2 Hold와 연타의 불일치
+### 2.2 Hold와 연타의 불일치
 
 Revector가 Press/Retarget 이벤트에서 재시작되면:
 
@@ -164,7 +151,7 @@ D 연타
 
 되어 입력 빈도가 사실상 추가 추진력처럼 작동한다.
 
-## 2.3 All Release가 Transient 결과를 Persistent로 승격
+### 2.3 All Release가 Transient 결과를 Persistent로 승격
 
 모든 이동 입력을 놓을 때:
 
@@ -185,7 +172,7 @@ Persistent = Current Actual
 
 이라는 exploit이 가능해진다.
 
-## 2.4 Main Propulsion이 기존 횡관성을 회수하지 못함
+### 2.4 Main Propulsion이 기존 횡관성을 회수하지 못함
 
 다음 상태에서:
 
@@ -203,7 +190,7 @@ Velocity ↖
 
 즉 Main Propulsion이 장기 운동을 지배한다는 감각을 만들지 못한다.
 
-## 2.5 Persistent 우선 Hard Cap
+### 2.5 Persistent 우선 Hard Cap
 
 속도 상한에서 Persistent를 먼저 보존하고 Controlled Motion을 줄이면:
 
@@ -217,7 +204,7 @@ Velocity ↖
 
 고속일수록 현재 방향 전환이 어려워지는 문제가 발생했다.
 
-## 2.6 Newly Activated Axis 중심 Revector
+### 2.6 Newly Activated Axis 중심 Revector
 
 W를 누른 상태에서 A를 추가할 때 전체 현재 Command가 아니라 새로 활성화된 A만 Revector 목표로 쓰면:
 
@@ -237,11 +224,11 @@ A → W
 
 ---
 
-# 3. 폐기한 제어 패턴
+## 3. 당시 폐기한 제어 패턴
 
 다음 패턴은 현재 Canon에서 사용하지 않는다.
 
-## 3.1 KeyDown 기반 Burst Authority
+### 3.1 KeyDown 기반 Burst Authority
 
 ```text
 KeyDown
@@ -253,7 +240,7 @@ KeyDown
 - 입력 빈도가 추진력을 만듦
 - Hold와 연타가 비정상적으로 달라짐
 
-## 3.2 고정 시간 Transient / Sustain
+### 3.2 고정 시간 Transient / Sustain
 
 ```text
 입력 후 일정 시간 강한 제어
@@ -265,7 +252,7 @@ KeyDown
 - 실제 Motion Error와 무관하게 Authority가 감소
 - Command를 계속 유지해도 기존 관성으로 되끌릴 수 있음
 
-## 3.3 장기 Hidden Velocity Contribution
+### 3.3 장기 Hidden Velocity Contribution
 
 ```text
 LateralContribution
@@ -281,7 +268,7 @@ RevectorCorrection
 - 실제 Rigidbody Velocity와 내부 상태를 계속 동기화해야 함
 - 관성 표현을 위해 실제 Velocity 외에 중복 상태를 유지하게 됨
 
-## 3.4 Input Order Dependency
+### 3.4 Input Order Dependency
 
 동일한 Current State와 Current Command에서 과거 입력 순서에 따라 결과가 달라지는 구조.
 
@@ -292,11 +279,11 @@ RevectorCorrection
 
 ---
 
-# 4. 현재 Canon에 남은 교훈
+## 4. 당시 정리한 교훈과 현재 재평가
 
-과거 Prototype의 실패에서 다음 원칙만 현재 `SYS-110`으로 승계했다.
+Prototype 0.5 폐기 시점에는 다음 대응 방향을 승계 대상으로 정리했다. 이 표는 당시 판단을 보존한 것이며 현재 규칙은 §4.1과 `SYS-110`을 따른다.
 
-| 과거 문제 | 현재 Canon 대응 |
+| 과거 문제 | 당시 대응 방향 |
 |---|---|
 | Body 회전이 운동을 암묵적으로 끌고 감 | Facing / Velocity 독립 |
 | AddForce만으로 반대 관성 탈출이 느림 | High-authority Maneuver |
@@ -308,13 +295,13 @@ RevectorCorrection
 | Persistent 우선 Hard Cap | Hard Cap에서도 Steering Authority 보존 |
 | 입력 순서 의존 | Command Order Independence |
 
-이 표는 과거 설계를 현재 구현에 다시 도입하기 위한 것이 아니라, **현재 Canon이 어떤 실패를 방지해야 하는지 추적하기 위한 기록**이다.
+이 표는 과거 설계를 현재 구현에 다시 도입하기 위한 것이 아니라, 어떤 실패를 방지하려 했는지 추적하기 위한 기록이다.
 
-## 4.1 2026-09-25 현행 Baseline에 의한 재평가
+### 4.1 2026-09-25 Baseline 재평가
 
-후속 직접 조작 검증에서 통합 3D Command를 사용하는 현행 Flight Prototype의 전체 조작감이 승인되었다.
+2026-09-25 후속 직접 조작 검증에서 통합 3D Command를 사용하는 Flight Prototype의 전체 조작감이 승인되었다.
 
-현행 Baseline은 외형상 Prototype 0.2의 Vector Command와 일부 유사하지만 다음 조건이 다르다.
+해당 Baseline은 외형상 Prototype 0.2의 Vector Command와 일부 유사하지만 다음 조건이 다르다.
 
 - Press 횟수에 따른 Burst Authority를 사용하지 않는다.
 - 과거 입력 순서나 Newly Activated Axis를 운동 에너지로 사용하지 않는다.
@@ -325,30 +312,12 @@ RevectorCorrection
 - SteeringReference, CameraView, BodyFacing을 분리한다.
 - 입력 해제 시 마지막 방향을 유지하되 ControlledSpeed와 PropulsionAuthority를 감쇠한다.
 
-따라서 과거의 “Vector Command가 주추력 의미를 약화한다”는 평가는 당시 Prototype의 관찰로 보존하되, 통합 방향 Command 자체를 현재 프로젝트에서 금지하는 근거로 사용하지 않는다.
+따라서 과거의 “Vector Command가 주추력 의미를 약화한다”는 평가는 당시 Prototype의 관찰로 보존하되, 통합 방향 Command 자체를 금지하는 근거로 사용하지 않는다.
 
-현재 승인된 규칙과 검증 항목은 `SYS-110 revision 2.0`을 따른다. 이 재평가는 과거 테스트 결과를 삭제하거나 Prototype 0.2를 그대로 복원한다는 의미가 아니다.
-
----
-
-# 5. Archive 사용 규칙
-
-다음 질문에서는 본 문서를 사용할 수 있다.
-
-- “왜 PersistentVelocity 구조를 버렸는가?”
-- “왜 KeyDown 기반 Revector를 사용하지 않는가?”
-- “Prototype 0.2와 현재 구조의 차이는 무엇인가?”
-- “Hold와 반복 입력 exploit은 어떻게 발생했는가?”
-
-다음 질문에서는 본 문서를 기본 근거로 사용하지 않는다.
-
-- “현재 W/S는 어떻게 동작하는가?”
-- “현재 A/D/R/F의 Authority 규칙은 무엇인가?”
-- “현재 Combat/Cruise 모드는 어떻게 구분되는가?”
-- “현재 카메라와 추진익은 어떻게 표현하는가?”
-
-위 질문은 `SYS-110 플레이어 기동 시스템`을 우선한다.
+당시 승인된 규칙과 검증 항목은 `SYS-110 revision 2.0`에 반영되었다. 이 재평가는 과거 테스트 결과를 삭제하거나 Prototype 0.2를 그대로 복원한다는 의미가 아니다.
 
 ---
 
-**Archive 기준일: 2026-09-24**
+## 5. 현재 사용 범위
+
+PersistentVelocity 폐기, KeyDown Revector, Hold·연타 exploit, Prototype 0.2와 현행 구조의 차이를 추적할 때 이 문서를 사용한다. 현재 입력·Authority·Combat/Cruise·카메라·추진익 규칙은 `SYS-110`을 우선한다.
