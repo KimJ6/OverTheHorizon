@@ -10,6 +10,7 @@ namespace OverTheHorizon.Player.View
     /// - Alt Release: SteeringReference는 유지되고 CameraView만 빠르게 복귀한다.
     /// Body는 Flight 계층에서 SteeringReference를 유한한 속도로 추종한다.
     /// </summary>
+    [DefaultExecutionOrder(-200)]
     [DisallowMultipleComponent]
     public sealed class PlayerViewState : MonoBehaviour
     {
@@ -63,6 +64,32 @@ namespace OverTheHorizon.Player.View
         public bool IsFreeLook => freeLookHeld;
         public bool IsCameraRecentering => recenteringCamera;
         public bool IsInitialized => initialized;
+        public PlayerInputReader InputReader => inputReader;
+        public ulong LastAppliedRawSequence { get; private set; }
+        private bool gameplayViewEnabled = true;
+        public bool GameplayViewEnabled => gameplayViewEnabled;
+        public void SetGameplayViewEnabled(bool enabled) { gameplayViewEnabled = enabled; }
+        public readonly struct PreparationState
+        {
+            internal readonly float SteeringYaw, SteeringPitch, CameraYaw, CameraPitch;
+            internal readonly bool FreeLook, Recentering, Initialized, Enabled;
+            internal readonly ulong Sequence;
+            internal PreparationState(PlayerViewState view)
+            {
+                SteeringYaw = view.steeringYaw; SteeringPitch = view.steeringPitch;
+                CameraYaw = view.cameraYaw; CameraPitch = view.cameraPitch;
+                FreeLook = view.freeLookHeld; Recentering = view.recenteringCamera;
+                Initialized = view.initialized; Enabled = view.gameplayViewEnabled; Sequence = view.LastAppliedRawSequence;
+            }
+        }
+        public PreparationState CapturePreparationState() => new PreparationState(this);
+        public void RestorePreparationState(PreparationState state)
+        {
+            steeringYaw = state.SteeringYaw; steeringPitch = state.SteeringPitch;
+            cameraYaw = state.CameraYaw; cameraPitch = state.CameraPitch;
+            freeLookHeld = state.FreeLook; recenteringCamera = state.Recentering;
+            initialized = state.Initialized; gameplayViewEnabled = state.Enabled; LastAppliedRawSequence = state.Sequence;
+        }
 
         private void Reset()
         {
@@ -79,8 +106,10 @@ namespace OverTheHorizon.Player.View
 
         private void Update()
         {
-            if (inputReader == null)
+            if (inputReader == null || !gameplayViewEnabled)
                 return;
+            RawControlSnapshot raw = inputReader.RawSnapshot;
+            if (!raw.Valid || raw.Sequence == LastAppliedRawSequence) return;
 
             Vector2 look = inputReader.ReadLookDelta();
             bool freeLookNow = inputReader.ReadFreeLookHeld();
@@ -133,6 +162,7 @@ namespace OverTheHorizon.Player.View
             NormalizeYawIfNeeded();
 
             freeLookHeld = freeLookNow;
+            LastAppliedRawSequence = raw.Sequence;
         }
 
         public void InitializeFromTransform(Transform source)
@@ -151,6 +181,7 @@ namespace OverTheHorizon.Player.View
             freeLookHeld = false;
             recenteringCamera = false;
             initialized = true;
+            LastAppliedRawSequence = 0;
         }
 
         /// <summary>
@@ -165,6 +196,7 @@ namespace OverTheHorizon.Player.View
             freeLookHeld = false;
             recenteringCamera = false;
             initialized = true;
+            LastAppliedRawSequence = 0;
         }
 
         private void NormalizeYawIfNeeded()

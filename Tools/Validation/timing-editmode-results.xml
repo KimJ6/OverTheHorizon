@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="12" result="Passed" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.4778713">
+  <test-suite type="TestSuite" id="1067" name="OverTheHorizon" fullname="OverTheHorizon" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.477871" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1057" name="OverTheHorizon.Timing.EditMode.dll" fullname="D:/MyWork/GitHub/Unity/OverTheHorizon/Library/ScriptAssemblies/OverTheHorizon.Timing.EditMode.dll" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.461934" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="5236" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1058" name="OverTheHorizon" fullname="OverTheHorizon" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.460553" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1059" name="Tests" fullname="OverTheHorizon.Tests" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.459928" total="12" passed="12" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1042" name="CombatExecutorTests" fullname="OverTheHorizon.Tests.CombatExecutorTests" classname="OverTheHorizon.Tests.CombatExecutorTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-08 08:00:15Z" end-time="2026-10-08 08:00:16Z" duration="0.428518" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1046" name="CanonicalTraceRoundTripsAndReplaysIntoIndependentWorld" fullname="OverTheHorizon.Tests.CombatExecutorTests.CanonicalTraceRoundTripsAndReplaysIntoIndependentWorld" methodname="CanonicalTraceRoundTripsAndReplaysIntoIndependentWorld" classname="OverTheHorizon.Tests.CombatExecutorTests" runstate="Runnable" seed="915595661" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.346635" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1045" name="DuplicatePlayerIdsAreRejected" fullname="OverTheHorizon.Tests.CombatExecutorTests.DuplicatePlayerIdsAreRejected" methodname="DuplicatePlayerIdsAreRejected" classname="OverTheHorizon.Tests.CombatExecutorTests" runstate="Runnable" seed="1614454908" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.005414" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1043" name="FourPlayersUseOneAuthorityUpdateAndRestoreWorldTime" fullname="OverTheHorizon.Tests.CombatExecutorTests.FourPlayersUseOneAuthorityUpdateAndRestoreWorldTime" methodname="FourPlayersUseOneAuthorityUpdateAndRestoreWorldTime" classname="OverTheHorizon.Tests.CombatExecutorTests" runstate="Runnable" seed="1252235726" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.003658" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1044" name="MissingMandatorySystemCannotReportSuccess" fullname="OverTheHorizon.Tests.CombatExecutorTests.MissingMandatorySystemCannotReportSuccess" methodname="MissingMandatorySystemCannotReportSuccess" classname="OverTheHorizon.Tests.CombatExecutorTests" runstate="Runnable" seed="1728725772" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.002246" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1047" name="TimingCoreTests" fullname="OverTheHorizon.Tests.TimingCoreTests" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.029248" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1052" name="AbortDoesNotCompleteReservedTick" fullname="OverTheHorizon.Tests.TimingCoreTests.AbortDoesNotCompleteReservedTick" methodname="AbortDoesNotCompleteReservedTick" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="1035220365" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.001962" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1051" name="ClockUsesIntegerOrdinal" fullname="OverTheHorizon.Tests.TimingCoreTests.ClockUsesIntegerOrdinal" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.012950" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1048" name="ClockUsesIntegerOrdinal(50)" fullname="OverTheHorizon.Tests.TimingCoreTests.ClockUsesIntegerOrdinal(50)" methodname="ClockUsesIntegerOrdinal" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="846887526" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.002978" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1049" name="ClockUsesIntegerOrdinal(60)" fullname="OverTheHorizon.Tests.TimingCoreTests.ClockUsesIntegerOrdinal(60)" methodname="ClockUsesIntegerOrdinal" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="1074957705" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.002324" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1050" name="ClockUsesIntegerOrdinal(120)" fullname="OverTheHorizon.Tests.TimingCoreTests.ClockUsesIntegerOrdinal(120)" methodname="ClockUsesIntegerOrdinal" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="1521475210" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.002318" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1053" name="DoubleBeginAndMismatchedCompletionAreRejected" fullname="OverTheHorizon.Tests.TimingCoreTests.DoubleBeginAndMismatchedCompletionAreRejected" methodname="DoubleBeginAndMismatchedCompletionAreRejected" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="1834675470" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.001359" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1055" name="DurationRoundingDoesNotAddSpuriousTick" fullname="OverTheHorizon.Tests.TimingCoreTests.DurationRoundingDoesNotAddSpuriousTick" methodname="DurationRoundingDoesNotAddSpuriousTick" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="793155023" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.001395" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1056" name="EdgeReadsAreNonDestructiveAndPartialAckKeepsNewEdges" fullname="OverTheHorizon.Tests.TimingCoreTests.EdgeReadsAreNonDestructiveAndPartialAckKeepsNewEdges" methodname="EdgeReadsAreNonDestructiveAndPartialAckKeepsNewEdges" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="1338973878" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.003807" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1054" name="TickDeadlineWorksAcrossWrap" fullname="OverTheHorizon.Tests.TimingCoreTests.TickDeadlineWorksAcrossWrap" methodname="TickDeadlineWorksAcrossWrap" classname="OverTheHorizon.Tests.TimingCoreTests" runstate="Runnable" seed="417001236" result="Passed" start-time="2026-10-08 08:00:16Z" end-time="2026-10-08 08:00:16Z" duration="0.000915" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Saving results to: C:/Users/User/AppData/LocalLow/DefaultCompany/OverTheHorizon\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

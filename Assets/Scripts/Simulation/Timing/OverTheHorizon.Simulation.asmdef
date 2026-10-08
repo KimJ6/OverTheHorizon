@@ -1,0 +1,1 @@
+{"name":"OverTheHorizon.Simulation","rootNamespace":"OverTheHorizon.Simulation","references":["OverTheHorizon.Timing","Unity.Entities","Unity.Collections","Unity.Mathematics"],"allowUnsafeCode":true}

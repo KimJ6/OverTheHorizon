@@ -1,0 +1,6 @@
+C# syntax parse: 30 delivered files PASS
+Unity metadata: 46 unique GUIDs PASS
+Assembly reference names: 7 asmdefs PASS (package assembly resolution requires Unity)
+Modified script metadata: 3 baseline GUIDs preserved PASS
+Actual Mono compile/run: PASS 60029 assertions; 30000 clock steps
+Unity Editor compile/test/physics/performance: NOT RUN
