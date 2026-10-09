@@ -139,6 +139,7 @@ namespace OverTheHorizon.LocalSimulation
             }
             public void Cleanup()
             {
+                Executor?.Invalidate("Session cleanup requested.");
                 CleanupStage = "Quarantine";
                 Suspend(true); Owner?.PauseIfOwned(); Driver?.Deactivate();
                 if (Driver != null && Driver.IsExecuting)
@@ -185,6 +186,8 @@ namespace OverTheHorizon.LocalSimulation
         private bool started, prepared, resumePending, startPending, pausePending, restartPending, stopPending;
         private int traceCapacity;
         private bool resumeArmed;
+        private double nextStructureAuditTime;
+        private const double StructureAuditIntervalSeconds = 1.0;
         private Action pendingPreparationRollback { get => resources.PendingPreparationRollback; set => resources.PendingPreparationRollback = value; }
         private SimulationFaultCode stage;
         public SimulationLifecycle State { get; private set; }
@@ -198,6 +201,8 @@ namespace OverTheHorizon.LocalSimulation
         public static string PendingCleanupError => LocalCleanupRecovery.LastError;
         public static string PendingCleanupStage => LocalCleanupRecovery.Stage;
         public static void RetryPendingCleanup() { LocalCleanupRecovery.Retry(); }
+        // Register executor-owned stages during preparation, before the pipeline is sealed.
+        public event Action<CombatStepExecutor> ConfigureExecution;
 
         private void Awake() { Acquire(); }
         private void OnEnable()
@@ -233,7 +238,11 @@ namespace OverTheHorizon.LocalSimulation
                 if (prepared)
                 {
                     if (executor == null || !executor.World.IsCreated) { Fail(SimulationFaultCode.WorldLost, "Session World is unavailable."); return; }
-                    driver.ValidateInstalled();
+                    if (State == SimulationLifecycle.Running && Time.realtimeSinceStartupAsDouble >= nextStructureAuditTime)
+                    {
+                        try { driver.ValidateInstalled(); nextStructureAuditTime = Time.realtimeSinceStartupAsDouble + StructureAuditIntervalSeconds; }
+                        catch (Exception error) { Fail(SimulationFaultCode.HookOrder, error); return; }
+                    }
                 }
                 if (State == SimulationLifecycle.Preparing)
                 {
@@ -331,9 +340,12 @@ namespace OverTheHorizon.LocalSimulation
                 }
                 frame = new NativeArray<PlayerStepElement>(4, Allocator.Persistent);
                 CombatStepExecutor retained = null;
-                try { CombatStepExecutor.Create(world, out retained); }
+                try { CombatStepExecutor.Create(world, nextGeneration, config, out retained); }
                 finally { executor = retained; }
+                ConfigureExecution?.Invoke(executor);
+                executor.Seal();
                 driver = new LocalFixedStepDriver(PrePhysics, PostPhysics);
+                driver.ValidateInstalled();
                 foreach (var camera in cameras) if (camera != null) camera.SnapNow();
                 foreach (var b in candidates) b.Reader.ResetInputCache();
                 ArmInputs(candidates);
@@ -448,7 +460,10 @@ namespace OverTheHorizon.LocalSimulation
         private void Run()
         {
             ValidateRegisteredBindings();
-            owner.Validate(); driver.ValidateInstalled();
+            owner.Validate();
+            try { driver.ValidateInstalled(); }
+            catch (Exception error) { Fail(SimulationFaultCode.HookOrder, error); return; }
+            nextStructureAuditTime = Time.realtimeSinceStartupAsDouble + StructureAuditIntervalSeconds;
             foreach (var b in bindings) b.Flight.SetManagedExecutionEnabled(true);
             startPending = resumePending = resumeArmed = pausePending = false;
             State = SimulationLifecycle.Running; owner.SetPaused(false);
@@ -464,6 +479,7 @@ namespace OverTheHorizon.LocalSimulation
             try
             {
                 if (ProcessRequests() || State != SimulationLifecycle.Running) { HoldBodies(); return; }
+                stage = SimulationFaultCode.HookOrder; driver.ValidateExecutionOrder();
                 stage = SimulationFaultCode.Ownership; owner.Validate();
                 stage = SimulationFaultCode.WorldLost;
                 if (executor == null || !executor.World.IsCreated) throw new InvalidOperationException("Session World is unavailable.");
@@ -504,6 +520,8 @@ namespace OverTheHorizon.LocalSimulation
             {
                 stage = SimulationFaultCode.HookOrder;
                 if (!progress.StepOpen) throw new InvalidOperationException("Post hook has no reserved step.");
+                driver.ValidateExecutionOrder();
+                stage = SimulationFaultCode.Ownership; owner.Validate();
                 stage = SimulationFaultCode.Configuration; ValidateRegisteredBindings();
                 stage = SimulationFaultCode.Snapshot;
                 for (int i = 0; i < bindings.Length; ++i)
@@ -515,10 +533,13 @@ namespace OverTheHorizon.LocalSimulation
                     frame[i] = BuildFrame(b, end);
                 }
                 stage = SimulationFaultCode.Ecs;
-                executor.Execute(current, config, progress.CompletedTick, progress.CompletedOrdinal, frame);
+                if (executor.CompletedTick != progress.CompletedTick || executor.CompletedOrdinal != progress.CompletedOrdinal)
+                    throw new InvalidOperationException("Local and ECS completion diverged.");
+                executor.Execute(current, frame);
                 // Destruction inside group.Update quarantines the session and defers release.
                 if (State != SimulationLifecycle.Running || !progress.StepOpen) return;
                 stage = SimulationFaultCode.Configuration; ValidateRegisteredBindings();
+                progress.ValidateCompletion(current); executor.ValidatePending(current);
                 executor.PublishCompleted(current); progress.Complete(current);
                 for (int i = 0; i < bindings.Length; ++i)
                 {
@@ -527,7 +548,9 @@ namespace OverTheHorizon.LocalSimulation
                         ToVector(p.EndVelocity), ToVector(p.EndAngularVelocity));
                     b.Reader.Edges.AckThrough(b.EdgeWatermark);
                 }
-                Trace.Append(current, true, frame);
+                // A diagnostic failure after publication cannot turn a completed step into an aborted one.
+                try { Trace.Append(current, true, frame); }
+                catch (Exception error) { Fail(SimulationFaultCode.Capacity, "Completed step trace failed: " + error.Message); return; }
                 ProcessRequests();
             }
             catch (Exception error) { Fail(stage, error); }
@@ -561,6 +584,7 @@ namespace OverTheHorizon.LocalSimulation
             if (LastFault.Code == SimulationFaultCode.None)
                 LastFault = new SimulationFault(code, progress.Generation, progress.ReservedTick, progress.CompletedTick, code.ToString(), message, playerId);
             bool hadStep = progress.StepOpen;
+            executor?.Invalidate(message);
             progress.Abort(); ClearRequests(); State = SimulationLifecycle.Faulted;
             var errors = new List<Exception>();
             Attempt(SuspendBodies, errors); Attempt(() => DisarmInputs(), errors);

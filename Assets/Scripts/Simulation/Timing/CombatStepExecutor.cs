@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using Unity.Collections;
 using Unity.Core;
 using Unity.Entities;
@@ -7,47 +8,52 @@ using OverTheHorizon.Timing;
 
 namespace OverTheHorizon.Simulation
 {
-    /// <summary>A caller-supplied World and canonical data; no cameras, global Time, or Rigidbody dependencies.</summary>
+    public enum CombatExecutionState { Preparing, Ready, Executing, PendingPublication, Faulted, Disposed }
+
+    /// <summary>One generation in a caller-owned World. Failed effects require explicit World recovery.</summary>
     public sealed class CombatStepExecutor : IDisposable
     {
         private readonly World world;
+        private readonly ulong generation;
+        private readonly SimulationTimingConfig config;
+        private readonly List<CombatStepSystem> owned = new List<CombatStepSystem>();
+        private readonly StepJobFence fence = new StepJobFence();
         private CombatFixedStepSystemGroup group;
         private SimulationEntrySystem entry;
-        private SimulationInputValidationSystem validation;
         private SimulationCompleteSystem exit;
         private Entity entity;
-        private readonly StepJobFence fence = new StepJobFence();
-        private bool disposed;
-        private bool completionPending;
-        private bool initialized, executing;
+        private bool initialized, executing, timePushed;
         private SimulationStepContext executed;
+        public CombatExecutionState State { get; private set; } = CombatExecutionState.Preparing;
+        public uint CompletedTick { get; private set; }
+        public ulong CompletedOrdinal { get; private set; }
+        public Exception LastFailure { get; private set; }
         public World World => world;
         public Entity SessionEntity => entity;
-        public CombatFixedStepSystemGroup Group => group;
         public bool IsExecuting => executing;
-        private CombatStepExecutor(World world, bool deferred)
+        internal SimulationStepContext CurrentStep => executed;
+        internal StepJobFence Jobs => fence;
+
+        private CombatStepExecutor(World world, ulong generation, SimulationTimingConfig config, bool deferred)
         {
             if (world == null || !world.IsCreated) throw new ArgumentException("A live World is required.");
-            this.world = world;
+            if (generation == 0 || config.Version < 1 || config.FixedDeltaTime <= 0)
+                throw new ArgumentException("An explicit generation and constructed timing configuration are required.");
+            this.world = world; this.generation = generation; this.config = config;
             if (world.GetExistingSystemManaged<CombatFixedStepSystemGroup>() != null
                 || world.GetExistingSystemManaged<SimulationEntrySystem>() != null
-                || world.GetExistingSystemManaged<SimulationInputValidationSystem>() != null
                 || world.GetExistingSystemManaged<SimulationCompleteSystem>() != null)
                 throw new InvalidOperationException("Timing systems already exist in this World.");
         }
-        // The caller owns the instance before initialization allocates any native resources.
-        public static void Create(World world, out CombatStepExecutor retained)
+        public static void Create(World world, ulong generation, SimulationTimingConfig config, out CombatStepExecutor retained)
         {
             retained = null;
-            retained = new CombatStepExecutor(world, true);
+            retained = new CombatStepExecutor(world, generation, config, true);
             retained.Initialize();
         }
-        public CombatStepExecutor(World world) : this(world, true)
+        public CombatStepExecutor(World world, ulong generation, SimulationTimingConfig config) : this(world, generation, config, true)
         {
-            try
-            {
-                Initialize();
-            }
+            try { Initialize(); }
             catch (Exception error)
             {
                 try { Dispose(); }
@@ -57,78 +63,151 @@ namespace OverTheHorizon.Simulation
         }
         private void Initialize()
         {
-            // Prepare the World time singleton/stack before the first authority step.
-            world.PushTime(world.Time); world.PopTime();
+            world.PushTime(world.Time); timePushed = true; world.PopTime(); timePushed = false;
             entity = world.EntityManager.CreateEntity(typeof(SimulationStepHeader), typeof(SimulationStepReceipt));
+            world.EntityManager.SetComponentData(entity, new SimulationStepHeader
+            { Generation = generation, TickRate = config.TickRate, DeltaTime = config.FixedDeltaTime });
             var buffer = world.EntityManager.AddBuffer<PlayerStepElement>(entity); buffer.ResizeUninitialized(4);
             for (int i = 0; i < 4; ++i) buffer[i] = default;
             group = world.GetOrCreateSystemManaged<CombatFixedStepSystemGroup>(); group.RateManager = null;
-            entry = world.GetOrCreateSystemManaged<SimulationEntrySystem>();
-            validation = world.GetOrCreateSystemManaged<SimulationInputValidationSystem>();
-            exit = world.GetOrCreateSystemManaged<SimulationCompleteSystem>();
-            entry.SessionEntity = validation.SessionEntity = exit.SessionEntity = entity; validation.Fence = fence;
-            group.AddSystemToUpdateList(entry); group.AddSystemToUpdateList(validation); group.AddSystemToUpdateList(exit);
-            group.SortSystems();
+            group.Executor = this;
+            entry = CreateStage<SimulationEntrySystem>();
+            exit = CreateStage<SimulationCompleteSystem>();
             initialized = true;
         }
-        public void Execute(SimulationStepContext context, SimulationTimingConfig config,
-            uint completedTick, ulong completedOrdinal, NativeArray<PlayerStepElement> players)
+        private T CreateStage<T>() where T : CombatStepSystem, new()
         {
-            if (disposed || !initialized || executing || !world.IsCreated || players.Length != 4 || completionPending)
-                throw new InvalidOperationException("Executor is unavailable or the previous successful step is unpublished.");
-            if (config.Version < 1 || context.ConfigVersion != config.Version || context.TickRate != config.TickRate
-                || context.DeltaTime != config.FixedDeltaTime || context.Ordinal != checked(completedOrdinal + 1)
-                || context.Tick != unchecked(completedTick + 1)) throw new InvalidOperationException("Step progress or configuration mismatch.");
-            fence.Complete();
-            var manager = world.EntityManager;
-            if (!manager.Exists(entity)) throw new InvalidOperationException("Timing entity was removed.");
-            manager.SetComponentData(entity, new SimulationStepHeader { Generation = context.Generation, Tick = context.Tick,
-                Ordinal = context.Ordinal, DeltaTime = context.DeltaTime, TickRate = config.TickRate,
-                CompletedTick = completedTick, CompletedOrdinal = completedOrdinal });
-            manager.SetComponentData(entity, default(SimulationStepReceipt));
-            var buffer = manager.GetBuffer<PlayerStepElement>(entity);
-            for (int i = 0; i < 4; ++i) buffer[i] = players[i];
-            world.PushTime(new TimeData(context.EndTime, context.DeltaTime));
-            executing = true;
-            try { group.Update(); }
-            finally { try { fence.Complete(); } finally { try { world.PopTime(); } finally { executing = false; } } }
-            uint bits = manager.GetComponentData<SimulationStepReceipt>(entity).Bits;
-            if (bits != 7 || !validation.ValidationPassed)
-                throw new InvalidOperationException("Mandatory ECS stages or input validation did not complete.");
-            executed = context; completionPending = true;
+            if (world.GetExistingSystemManaged<T>() != null)
+                throw new InvalidOperationException("Stage already belongs to this World: " + typeof(T).Name);
+            var stage = world.GetOrCreateSystemManaged<T>(); owned.Add(stage); return stage;
+        }
+        public T RegisterStage<T>() where T : CombatStepSystem, new()
+        {
+            if (!initialized || State != CombatExecutionState.Preparing)
+                throw new InvalidOperationException("Stages can only be registered while preparing.");
+            return CreateStage<T>();
+        }
+        public void Seal()
+        {
+            if (!initialized || State != CombatExecutionState.Preparing)
+                throw new InvalidOperationException("Only a prepared executor can be sealed.");
+            var stages = new CombatStepSystem[owned.Count]; stages[0] = entry;
+            for (int i = 2; i < owned.Count; ++i) stages[i - 1] = owned[i];
+            stages[stages.Length - 1] = exit; group.Stages = stages;
+            State = CombatExecutionState.Ready;
+        }
+        public void Execute(SimulationStepContext context, NativeArray<PlayerStepElement> players)
+        {
+            if (State != CombatExecutionState.Ready || !initialized || executing || !world.IsCreated)
+                throw new InvalidOperationException("Executor is not ready.");
+            if (context.Generation != generation || context.ConfigVersion != config.Version || context.TickRate != config.TickRate
+                || context.DeltaTime != config.FixedDeltaTime || context.Ordinal != checked(CompletedOrdinal + 1)
+                || context.Tick != unchecked(CompletedTick + 1))
+                throw new InvalidOperationException("Step progress or session configuration mismatch.");
+            CanonicalPlayerFrameValidator.Validate(context, players);
+            try { ValidateHeader(CompletedTick, CompletedOrdinal); }
+            catch (Exception error) { Fault(error); throw; }
+            State = CombatExecutionState.Executing; executing = true; executed = context;
+            Exception failure = null;
+            try
+            {
+                fence.Complete();
+                var manager = world.EntityManager;
+                manager.SetComponentData(entity, new SimulationStepHeader { Generation = generation, Tick = context.Tick,
+                    Ordinal = context.Ordinal, DeltaTime = config.FixedDeltaTime, TickRate = config.TickRate,
+                    CompletedTick = CompletedTick, CompletedOrdinal = CompletedOrdinal });
+                manager.SetComponentData(entity, default(SimulationStepReceipt));
+                var buffer = manager.GetBuffer<PlayerStepElement>(entity);
+                for (int i = 0; i < 4; ++i) buffer[i] = players[i];
+                world.PushTime(new TimeData(context.EndTime, context.DeltaTime)); timePushed = true;
+                group.Completed = false;
+                if (group.RateManager != null) throw new InvalidOperationException("Combat rate manager was replaced.");
+                group.Update();
+                RequireExecuting();
+                if (!group.Completed) throw new InvalidOperationException("Mandatory combat runner did not execute.");
+                ValidateHeader(context.Tick, context.Ordinal);
+            }
+            catch (Exception error) { failure = error; }
+            finally
+            {
+                try { fence.Complete(); } catch (Exception error) { failure = Combine(failure, error); }
+                try { RestoreTime(); } catch (Exception error) { failure = Combine(failure, error); }
+                executing = false;
+            }
+            if (failure != null) { Fault(failure); ExceptionDispatchInfo.Capture(failure).Throw(); }
+            State = CombatExecutionState.PendingPublication;
+        }
+        internal void RequireExecuting()
+        {
+            if (!executing || State != CombatExecutionState.Executing || !world.IsCreated)
+                throw new InvalidOperationException("Combat execution was cancelled or lost its World.", LastFailure);
+        }
+        private void ValidateHeader(uint tick, ulong ordinal)
+        {
+            if (!world.IsCreated || !world.EntityManager.Exists(entity))
+                throw new InvalidOperationException("Timing entity was removed.");
+            var h = world.EntityManager.GetComponentData<SimulationStepHeader>(entity);
+            if (h.Generation != generation || h.Tick != tick || h.Ordinal != ordinal
+                || h.CompletedTick != CompletedTick || h.CompletedOrdinal != CompletedOrdinal
+                || h.TickRate != config.TickRate || h.DeltaTime != config.FixedDeltaTime)
+                throw new InvalidOperationException("The owned timing header was changed externally.");
+        }
+        public void ValidatePending(SimulationStepContext context)
+        {
+            if (State != CombatExecutionState.PendingPublication || !context.Matches(executed))
+                throw new InvalidOperationException("Only the successfully executed pending step may be published.");
+            try { ValidateHeader(context.Tick, context.Ordinal); }
+            catch (Exception error) { Fault(error); throw; }
         }
         public void PublishCompleted(SimulationStepContext context)
         {
-            if (disposed || !world.IsCreated || !completionPending || !context.Matches(executed))
-                throw new InvalidOperationException("Only the successfully executed pending step may be published.");
-            var header = world.EntityManager.GetComponentData<SimulationStepHeader>(entity);
-            if (header.Generation != context.Generation || header.Ordinal != context.Ordinal || header.Tick != context.Tick)
-                throw new InvalidOperationException("The executed header was replaced before publication.");
-            header.CompletedTick = context.Tick; header.CompletedOrdinal = context.Ordinal;
-            world.EntityManager.SetComponentData(entity, header);
-            completionPending = false;
+            ValidatePending(context);
+            try
+            {
+                var header = world.EntityManager.GetComponentData<SimulationStepHeader>(entity);
+                header.CompletedTick = context.Tick; header.CompletedOrdinal = context.Ordinal;
+                world.EntityManager.SetComponentData(entity, header);
+                CompletedTick = context.Tick; CompletedOrdinal = context.Ordinal;
+                State = CombatExecutionState.Ready;
+            }
+            catch (Exception error) { Fault(error); throw; }
         }
+        public void Invalidate(string reason)
+        {
+            if (State == CombatExecutionState.Disposed || State == CombatExecutionState.Faulted) return;
+            Fault(new InvalidOperationException(reason));
+        }
+        private void Fault(Exception error) { LastFailure = LastFailure == null ? error : Combine(LastFailure, error); State = CombatExecutionState.Faulted; }
+        private static Exception Combine(Exception first, Exception next) => first == null ? next : new AggregateException(first, next);
         public void CompleteJobs() { fence.Complete(); }
+        private void RestoreTime()
+        {
+            if (!timePushed) return;
+            if (world.IsCreated) world.PopTime();
+            timePushed = false;
+        }
         public void Dispose()
         {
-            if (disposed) return;
-            if (executing) throw new InvalidOperationException("Cannot release an executing combat group.");
-            // If completion fails, retain resources so a caller cannot free buffers still used by jobs.
-            fence.Complete();
+            if (State == CombatExecutionState.Disposed) return;
+            if (executing) throw new InvalidOperationException("Cannot release an executing combat runner.");
+            Invalidate("Executor disposed.");
+            fence.Complete(); RestoreTime();
             var errors = new List<Exception>();
-            if (world != null && world.IsCreated)
+            if (world.IsCreated)
             {
-                Release(() => { if (entry != null) { group?.RemoveSystemFromUpdateList(entry); world.DestroySystemManaged(entry); entry = null; } }, errors);
-                Release(() => { if (validation != null) { group?.RemoveSystemFromUpdateList(validation); world.DestroySystemManaged(validation); validation = null; } }, errors);
-                Release(() => { if (exit != null) { group?.RemoveSystemFromUpdateList(exit); world.DestroySystemManaged(exit); exit = null; } }, errors);
-                if (errors.Count == 0)
-                    Release(() => { if (group != null) { world.DestroySystemManaged(group); group = null; } }, errors);
-                Release(() => { if (world.EntityManager.Exists(entity)) world.EntityManager.DestroyEntity(entity); entity = Entity.Null; }, errors);
+                for (int i = owned.Count - 1; i >= 0; --i)
+                {
+                    var stage = owned[i]; if (stage == null) continue;
+                    try { world.DestroySystemManaged(stage); owned[i] = null; }
+                    catch (Exception error) { errors.Add(error); }
+                }
+                if (errors.Count == 0 && group != null)
+                    try { world.DestroySystemManaged(group); group = null; } catch (Exception error) { errors.Add(error); }
+                if (errors.Count == 0 && world.EntityManager.Exists(entity))
+                    try { world.EntityManager.DestroyEntity(entity); entity = Entity.Null; } catch (Exception error) { errors.Add(error); }
             }
             if (errors.Count != 0) throw new AggregateException("Combat execution cleanup failed.", errors);
-            disposed = true;
+            State = CombatExecutionState.Disposed;
         }
-        private static void Release(Action action, List<Exception> errors)
-        { try { action(); } catch (Exception error) { errors.Add(error); } }
     }
 }

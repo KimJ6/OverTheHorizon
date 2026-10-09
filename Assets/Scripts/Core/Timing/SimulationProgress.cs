@@ -30,9 +30,13 @@ namespace OverTheHorizon.Timing
             StepOpen = true;
             return openStep;
         }
-        public void Complete(SimulationStepContext context)
+        public void ValidateCompletion(SimulationStepContext context)
         {
             if (!StepOpen || Faulted || !context.Matches(openStep)) throw new InvalidOperationException("Completion does not match the reserved step.");
+        }
+        public void Complete(SimulationStepContext context)
+        {
+            ValidateCompletion(context);
             CompletedTick = context.Tick; CompletedOrdinal = context.Ordinal; StepOpen = false;
         }
         public void Abort()

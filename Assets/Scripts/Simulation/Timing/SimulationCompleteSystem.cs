@@ -3,11 +3,9 @@ using Unity.Entities;
 namespace OverTheHorizon.Simulation
 {
     [DisableAutoCreation]
-    [UpdateAfter(typeof(SimulationInputValidationSystem))]
-    public partial class SimulationCompleteSystem : SystemBase
+    public partial class SimulationCompleteSystem : CombatStepSystem
     {
-        public Entity SessionEntity;
-        protected override void OnUpdate()
+        protected override void OnStep()
         {
             // Reaching the end is NOT authority completion. The executor must join and validate first.
             StepComponentUtility.Mark(EntityManager, SessionEntity, SimulationStepReceipt.Exit);

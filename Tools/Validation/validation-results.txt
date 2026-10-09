@@ -1,6 +1,8 @@
-C# syntax parse: 30 delivered files PASS
-Unity metadata: 46 unique GUIDs PASS
-Assembly reference names: 7 asmdefs PASS (package assembly resolution requires Unity)
-Modified script metadata: 3 baseline GUIDs preserved PASS
-Actual Mono compile/run: PASS 60029 assertions; 30000 clock steps
-Unity Editor compile/test/physics/performance: NOT RUN
+Previous standalone baseline: C# syntax parse 30 delivered files PASS; Mono compile/run 60029 assertions and 30000 clock steps PASS
+Current Unity metadata scan: 92 GUIDs / 92 unique PASS
+Current assembly definition scan: 7 asmdefs; Unity package resolution and compilation PASS
+Unity 6000.3.23f1 compile: PASS
+Unity EditMode: PASS 38/38 (2026-10-09 KST)
+Unity PlayMode: PASS 39/39 (2026-10-09 KST)
+Headless Editor 4-player timing sample (100 steps each): 50Hz 1581.315us / 0 GC allocation samples per step; 60Hz 1987.967us / 0; 120Hz 1302.917us / 0
+Player build and cross-platform physics determinism: NOT RUN

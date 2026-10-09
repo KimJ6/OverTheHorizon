@@ -4,11 +4,9 @@ using Unity.Entities;
 namespace OverTheHorizon.Simulation
 {
     [DisableAutoCreation]
-    [UpdateBefore(typeof(SimulationInputValidationSystem))]
-    public partial class SimulationEntrySystem : SystemBase
+    public partial class SimulationEntrySystem : CombatStepSystem
     {
-        public Entity SessionEntity;
-        protected override void OnUpdate()
+        protected override void OnStep()
         {
             if (!EntityManager.Exists(SessionEntity)) throw new InvalidOperationException("Timing entity is missing.");
             var header = EntityManager.GetComponentData<SimulationStepHeader>(SessionEntity);

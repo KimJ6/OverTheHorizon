@@ -1,11 +1,13 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Unity.Entities;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.LowLevel;
 using OverTheHorizon.Player.Flight;
 using OverTheHorizon.Player.Input;
 using OverTheHorizon.Player.View;
@@ -58,6 +60,8 @@ namespace OverTheHorizon.Tests
             var field = typeof(LocalSimulationBootstrap).GetField(name, flags);
             return field != null ? field.GetValue(root) : typeof(LocalSimulationBootstrap).GetProperty(name, flags).GetValue(root);
         }
+        private static int GetPrivateInt(object target, string name)
+            => (int)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(target);
         private static void InvokePrivate(object target, string name)
             => target.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(target, null);
         private void SetBody(Rigidbody body)
@@ -159,7 +163,7 @@ namespace OverTheHorizon.Tests
         [UnityTest] public IEnumerator ExecutionResourceFailureRollsBackAndPreservesGeneration()
         {
             CreateSession(false);
-            var conflict = new CombatStepExecutor(testWorld);
+            var conflict = new CombatStepExecutor(testWorld, 1, new SimulationTimingConfig(50));
             try
             {
                 LogAssert.Expect(LogType.Error, new Regex("Timing fault"));
@@ -384,6 +388,85 @@ namespace OverTheHorizon.Tests
             Assert.AreEqual(originalScale, Time.timeScale);
             using (var next = new LocalTimingOwner(new SimulationTimingConfig(50), 0.33333334f)) next.Validate();
         }
+        [UnityTest] public IEnumerator ReorderedPostCannotCompleteAnotherActualFixedStep()
+        {
+            CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
+            ulong completed = root.CompletedOrdinal;
+            var saved = PlayerLoop.GetCurrentPlayerLoop();
+            try
+            {
+                var loop = PlayerLoop.GetCurrentPlayerLoop(); MovePostBeforePhysics(ref loop); PlayerLoop.SetPlayerLoop(loop);
+                LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[HookOrder\\]"));
+                yield return Until(() => root.State == SimulationLifecycle.Faulted);
+                Assert.AreEqual(completed, root.CompletedOrdinal);
+                var executor = (CombatStepExecutor)GetField("executor");
+                Assert.AreEqual(completed, executor.CompletedOrdinal);
+                Assert.AreEqual(0, flight.InputReader.Edges.Count);
+            }
+            finally { PlayerLoop.SetPlayerLoop(saved); }
+        }
+        [UnityTest] public IEnumerator ReadyAndPausedDoNotQueryPlayerLoopEveryFrame()
+        {
+            CreateSession(false); yield return Until(() => root.State == SimulationLifecycle.Ready);
+            var driver = (LocalFixedStepDriver)GetField("driver"); int queries = GetPrivateInt(driver, "structureValidationCount");
+            for (int i = 0; i < 5; ++i) yield return null;
+            Assert.AreEqual(queries, GetPrivateInt(driver, "structureValidationCount"));
+            root.RequestStart(); yield return Until(() => root.CompletedOrdinal >= 2);
+            root.RequestPause(); yield return Until(() => root.State == SimulationLifecycle.Paused);
+            queries = GetPrivateInt(driver, "structureValidationCount");
+            for (int i = 0; i < 5; ++i) yield return null;
+            Assert.AreEqual(queries, GetPrivateInt(driver, "structureValidationCount"));
+        }
+        [UnityTest] public IEnumerator InvalidPausedLoopCannotResume()
+        {
+            CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
+            root.RequestPause(); yield return Until(() => root.State == SimulationLifecycle.Paused);
+            ulong completed = root.CompletedOrdinal; var saved = PlayerLoop.GetCurrentPlayerLoop();
+            try
+            {
+                var loop = PlayerLoop.GetCurrentPlayerLoop(); MovePostBeforePhysics(ref loop); PlayerLoop.SetPlayerLoop(loop);
+                LogAssert.Expect(LogType.Error, new Regex("Timing fault")); root.RequestResume();
+                yield return Until(() => root.State == SimulationLifecycle.Faulted);
+                Assert.AreEqual(completed, root.CompletedOrdinal); Assert.IsTrue(flight.Body.isKinematic);
+            }
+            finally { PlayerLoop.SetPlayerLoop(saved); }
+        }
+        [UnityTest] public IEnumerator RemovedRecoveryHookAfterHandoffStillDrainsWithoutNewRoot()
+        {
+            CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
+            bool fail = true; int attempts = 0;
+            SetField("pendingPreparationRollback", (Action)(() => { ++attempts; if (fail) throw new InvalidOperationException("Retained cleanup."); }));
+            LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
+            LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
+            UnityEngine.Object.DestroyImmediate(rootObject); rootObject = null;
+            Assert.AreEqual(1, LocalSimulationBootstrap.PendingCleanupCount);
+            var loop = PlayerLoop.GetCurrentPlayerLoop(); RemoveRecovery(ref loop); PlayerLoop.SetPlayerLoop(loop);
+            fail = false;
+            yield return Until(() => LocalSimulationBootstrap.PendingCleanupCount == 0);
+            Assert.AreEqual(3, attempts); Assert.IsFalse(flight.IsManaged); Assert.AreEqual(originalScale, Time.timeScale);
+        }
+        private static void MovePostBeforePhysics(ref PlayerLoopSystem node)
+        {
+            if (node.type == typeof(UnityEngine.PlayerLoop.FixedUpdate))
+            {
+                var list = new List<PlayerLoopSystem>(node.subSystemList);
+                int post = list.FindIndex(x => x.type.Name == "PostTimingHook"); var hook = list[post]; list.RemoveAt(post);
+                int physics = list.FindIndex(x => x.type == typeof(UnityEngine.PlayerLoop.FixedUpdate.PhysicsFixedUpdate));
+                list.Insert(physics, hook); node.subSystemList = list.ToArray(); return;
+            }
+            if (node.subSystemList != null) for (int i = 0; i < node.subSystemList.Length; ++i) MovePostBeforePhysics(ref node.subSystemList[i]);
+        }
+        private static void RemoveRecovery(ref PlayerLoopSystem node)
+        {
+            if (node.subSystemList == null) return;
+            var list = new List<PlayerLoopSystem>();
+            foreach (var original in node.subSystemList)
+            {
+                if (original.type.Name == "RecoveryHook") continue;
+                var child = original; RemoveRecovery(ref child); list.Add(child);
+            }
+            node.subSystemList = list.ToArray();
+        }
         [UnityTest] public IEnumerator PersistentDestroyedCleanupRetainsResourcesAndRejectsNewSession()
         {
             CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
@@ -410,17 +493,19 @@ namespace OverTheHorizon.Tests
         }
         [UnityTest] public IEnumerator DestructionInsideCombatUpdateDefersReleaseUntilExecutionReturns()
         {
-            CreateSession(false); yield return Until(() => root.State == SimulationLifecycle.Ready);
-            var executor = (CombatStepExecutor)GetField("executor");
-            var destroyer = testWorld.GetOrCreateSystemManaged<DestroyTimingRootSystem>();
+            CreateSession(false);
             bool observedExecuting = false;
-            destroyer.DestroyRoot = () =>
+            root.ConfigureExecution += executor =>
             {
-                observedExecuting = executor.IsExecuting;
-                UnityEngine.Object.DestroyImmediate(rootObject); rootObject = null;
-                Assert.IsTrue(executor.IsExecuting); Assert.IsTrue(testWorld.EntityManager.Exists(executor.SessionEntity));
+                var destroyer = executor.RegisterStage<DestroyTimingRootSystem>();
+                destroyer.DestroyRoot = () =>
+                {
+                    observedExecuting = executor.IsExecuting;
+                    UnityEngine.Object.DestroyImmediate(rootObject); rootObject = null;
+                    Assert.IsTrue(executor.IsExecuting); Assert.IsTrue(testWorld.EntityManager.Exists(executor.SessionEntity));
+                };
             };
-            executor.Group.AddSystemToUpdateList(destroyer); executor.Group.SortSystems();
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
             LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
             LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
             root.RequestStart();
@@ -474,10 +559,10 @@ namespace OverTheHorizon.Tests
         }
     }
     [DisableAutoCreation]
-    public partial class DestroyTimingRootSystem : SystemBase
+    public partial class DestroyTimingRootSystem : CombatStepSystem
     {
         public Action DestroyRoot;
-        protected override void OnUpdate()
+        protected override void OnStep()
         {
             var callback = DestroyRoot; DestroyRoot = null; callback?.Invoke();
         }
