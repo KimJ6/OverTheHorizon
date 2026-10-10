@@ -35,7 +35,7 @@ namespace OverTheHorizon.LocalSimulation
                 Time.fixedDeltaTime = config.FixedDeltaTime;
                 appliedFixed = Time.fixedDeltaTime; fixedApplied = true;
                 if (!PlayerValueValidation.Finite(appliedFixed) || appliedFixed <= 0
-                    || Math.Abs((double)appliedFixed - config.FixedDeltaTime) > config.FixedDeltaTime * 1e-6)
+                    || !SameFixedDeltaTime(appliedFixed, config.FixedDeltaTime))
                     throw new InvalidOperationException("Unity could not apply the requested fixed timestep.");
                 Time.maximumDeltaTime = maximumDeltaTime;
                 appliedMaximum = Time.maximumDeltaTime; maximumApplied = true;
@@ -69,7 +69,7 @@ namespace OverTheHorizon.LocalSimulation
         {
             if (disposed || active != this)
                 throw new InvalidOperationException("Timing owner is no longer the active owner.");
-            if (Time.fixedDeltaTime != appliedFixed)
+            if (!SameFixedDeltaTime(Time.fixedDeltaTime, appliedFixed))
                 throw new InvalidOperationException("Time.fixedDeltaTime expected " + F(appliedFixed) + ", actual " + F(Time.fixedDeltaTime) + ".");
             if (Time.maximumDeltaTime != appliedMaximum)
                 throw new InvalidOperationException("Time.maximumDeltaTime expected " + F(appliedMaximum) + ", actual " + F(Time.maximumDeltaTime) + ".");
@@ -79,6 +79,11 @@ namespace OverTheHorizon.LocalSimulation
                 throw new InvalidOperationException("Physics.simulationMode expected FixedUpdate, actual " + Physics.simulationMode + ".");
             if (InputSystem.settings.updateMode != InputSettings.UpdateMode.ProcessEventsInDynamicUpdate)
                 throw new InvalidOperationException("InputSystem updateMode expected ProcessEventsInDynamicUpdate, actual " + InputSystem.settings.updateMode + ".");
+        }
+        private static bool SameFixedDeltaTime(float left, float right)
+        {
+            double scale = Math.Max(Math.Abs((double)left), Math.Abs((double)right));
+            return Math.Abs((double)left - right) <= Math.Max(1e-7, scale * 1e-6);
         }
         private static string F(float value) => value.ToString("R", CultureInfo.InvariantCulture);
         public void Dispose()
@@ -90,11 +95,12 @@ namespace OverTheHorizon.LocalSimulation
                     Restore(() =>
                     {
                         if (!fixedApplied) return;
-                        if (Time.fixedDeltaTime != appliedFixed || originalFixed == appliedFixed) { fixedApplied = false; return; }
+                        if (!SameFixedDeltaTime(Time.fixedDeltaTime, appliedFixed)
+                            || SameFixedDeltaTime(originalFixed, appliedFixed)) { fixedApplied = false; return; }
                         Time.fixedDeltaTime = originalFixed;
                         appliedFixed = Time.fixedDeltaTime;
                         // Setter/getter round trips may quantize again; restoration has the same bounded error contract.
-                        if (Math.Abs((double)appliedFixed - originalFixed) > originalFixed * 1e-6)
+                        if (!SameFixedDeltaTime(appliedFixed, originalFixed))
                             throw new InvalidOperationException("Unity could not restore the original fixed timestep.");
                         fixedApplied = false;
                     }, errors);

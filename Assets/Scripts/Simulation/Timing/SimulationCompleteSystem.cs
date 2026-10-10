@@ -3,6 +3,8 @@ using Unity.Entities;
 namespace OverTheHorizon.Simulation
 {
     [DisableAutoCreation]
+    // R1 ordering anchor: this records pipeline reachability, not authority completion.
+    [UpdateInGroup(typeof(CombatFixedStepSystemGroup), OrderLast = true)]
     public partial class SimulationCompleteSystem : CombatStepSystem
     {
         protected override void OnStep()

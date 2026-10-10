@@ -2,10 +2,11 @@ using UnityEngine;
 
 namespace OverTheHorizon.LocalSimulation
 {
-    /// <summary>Independent fallback while a destroyed session's cleanup is retained.</summary>
+    /// <summary>Persistent cleanup owner after a session root is destroyed or time is paused.</summary>
     [DisallowMultipleComponent]
     internal sealed class LocalCleanupRecoveryHost : MonoBehaviour
     {
+        // LateUpdate remains eligible while Time.timeScale is zero.
         private void LateUpdate() { LocalCleanupRecovery.LateRecovery(); }
     }
 }

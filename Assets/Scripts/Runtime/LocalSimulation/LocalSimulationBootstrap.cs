@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Entities;
-using Unity.Mathematics;
 using UnityEngine;
 using OverTheHorizon.Player.Flight;
 using OverTheHorizon.Player.Input;
@@ -34,6 +33,44 @@ namespace OverTheHorizon.LocalSimulation
             public PlayerControlSnapshot Accepted;
             public ulong EdgeWatermark;
             public bool CreatedPublisher, ManagedBound, OriginalInputEnabled, OriginalViewEnabled;
+
+            // R4 player bridge: Bootstrap owns the session, while a Binding owns
+            // the per-player handoff from accepted input through physics to ECS data.
+            public void AcceptInputForStep(uint completedTick)
+            {
+                // This runs before Progress.Begin. A bad participant therefore
+                // rejects the tick before any authoritative reservation exists.
+                if (Flight == null || !Flight.isActiveAndEnabled || Flight.Body == null)
+                    throw new InvalidOperationException("A registered Flight is disabled or destroyed.");
+                Accepted = Input.Latest; EdgeWatermark = Reader.Edges.HighWatermark;
+                if (Reader.Edges.Count != 0)
+                    throw new InvalidOperationException("Discrete gameplay edges have no consumer in this implementation; refusing to drop or acknowledge them.");
+                if (Completed.StateTick != completedTick) throw new InvalidOperationException("Start snapshot is stale.");
+            }
+            public void PreparePhysicsStep(SimulationStepContext context, Vector3 gravity)
+            {
+                // This runs only after the context is reserved. It prepares the
+                // exact accepted input without changing completion state.
+                Suspension.Restore();
+                Flight.PrepareStep(context, Accepted, gravity);
+            }
+            public PlayerStepElement CaptureStepFrame(SimulationStepContext context, Vector3 gravity)
+            {
+                // R5 has no Script timing fence. The Flight context is therefore
+                // the live witness that Pre ran before ScriptRunBehaviourFixedUpdate;
+                // a reordered pre hook faults instead of publishing stale physics.
+                // Capture is observational; ECS validation still decides success.
+                if (Flight.AppliedGeneration != context.Generation || Flight.AppliedOrdinal != context.Ordinal)
+                    throw new InvalidOperationException("A mandatory Flight step did not complete.");
+                return LocalPlayerStatePublisher.BuildStepFrame(Id, Completed, Accepted, EdgeWatermark, context, gravity, Suspension.Body);
+            }
+            public void PublishStepFrame(PlayerStepElement frame)
+            {
+                // The caller invokes this only after the R3 authoritative commit.
+                // Advancing a local snapshot or input watermark is never a commit.
+                Completed = LocalPlayerStatePublisher.ReadCompleted(frame);
+                Reader.Edges.AckThrough(EdgeWatermark);
+            }
         }
         private sealed class BindingFault : InvalidOperationException
         {
@@ -186,8 +223,6 @@ namespace OverTheHorizon.LocalSimulation
         private bool started, prepared, resumePending, startPending, pausePending, restartPending, stopPending;
         private int traceCapacity;
         private bool resumeArmed;
-        private double nextStructureAuditTime;
-        private const double StructureAuditIntervalSeconds = 1.0;
         private Action pendingPreparationRollback { get => resources.PendingPreparationRollback; set => resources.PendingPreparationRollback = value; }
         private SimulationFaultCode stage;
         public SimulationLifecycle State { get; private set; }
@@ -238,11 +273,6 @@ namespace OverTheHorizon.LocalSimulation
                 if (prepared)
                 {
                     if (executor == null || !executor.World.IsCreated) { Fail(SimulationFaultCode.WorldLost, "Session World is unavailable."); return; }
-                    if (State == SimulationLifecycle.Running && Time.realtimeSinceStartupAsDouble >= nextStructureAuditTime)
-                    {
-                        try { driver.ValidateInstalled(); nextStructureAuditTime = Time.realtimeSinceStartupAsDouble + StructureAuditIntervalSeconds; }
-                        catch (Exception error) { Fail(SimulationFaultCode.HookOrder, error); return; }
-                    }
                 }
                 if (State == SimulationLifecycle.Preparing)
                 {
@@ -461,9 +491,11 @@ namespace OverTheHorizon.LocalSimulation
         {
             ValidateRegisteredBindings();
             owner.Validate();
+            // R5: installation is checked at the Ready/Paused -> Running boundary.
+            // Running steps use the retained native-physics fence instead of polling
+            // and traversing the PlayerLoop once per audit interval.
             try { driver.ValidateInstalled(); }
             catch (Exception error) { Fail(SimulationFaultCode.HookOrder, error); return; }
-            nextStructureAuditTime = Time.realtimeSinceStartupAsDouble + StructureAuditIntervalSeconds;
             foreach (var b in bindings) b.Flight.SetManagedExecutionEnabled(true);
             startPending = resumePending = resumeArmed = pausePending = false;
             State = SimulationLifecycle.Running; owner.SetPaused(false);
@@ -488,22 +520,11 @@ namespace OverTheHorizon.LocalSimulation
                 if (!AllInputsReady()) throw new InvalidOperationException("A current player input/view pair is unavailable.");
                 stepGravity = Physics.gravity;
                 foreach (var b in bindings)
-                {
-                    if (b.Flight == null || !b.Flight.isActiveAndEnabled || b.Flight.Body == null)
-                        throw new InvalidOperationException("A registered Flight is disabled or destroyed.");
-                    b.Accepted = b.Input.Latest; b.EdgeWatermark = b.Reader.Edges.HighWatermark;
-                    if (b.Reader.Edges.Count != 0)
-                        throw new InvalidOperationException("Discrete gameplay edges have no consumer in this implementation; refusing to drop or acknowledge them.");
-                    if (b.Completed.StateTick != progress.CompletedTick) throw new InvalidOperationException("Start snapshot is stale.");
-                }
+                    b.AcceptInputForStep(progress.CompletedTick);
                 stage = SimulationFaultCode.HookOrder; current = progress.Begin(config);
                 for (int i = 0; i < 4; ++i) frame[i] = default;
                 stage = SimulationFaultCode.Flight;
-                foreach (var b in bindings)
-                {
-                    b.Suspension.Restore();
-                    b.Flight.PrepareStep(current, b.Accepted, stepGravity);
-                }
+                foreach (var b in bindings) b.PreparePhysicsStep(current, stepGravity);
             }
             catch (Exception error) { Fail(stage, error); }
         }
@@ -525,29 +546,22 @@ namespace OverTheHorizon.LocalSimulation
                 stage = SimulationFaultCode.Configuration; ValidateRegisteredBindings();
                 stage = SimulationFaultCode.Snapshot;
                 for (int i = 0; i < bindings.Length; ++i)
-                {
-                    var b = bindings[i];
-                    if (b.Flight.AppliedGeneration != current.Generation || b.Flight.AppliedOrdinal != current.Ordinal)
-                        throw new InvalidOperationException("A mandatory Flight step did not complete.");
-                    var end = LocalPlayerStatePublisher.CaptureEnd(b.Suspension.Body, current.Tick);
-                    frame[i] = BuildFrame(b, end);
-                }
+                    frame[i] = bindings[i].CaptureStepFrame(current, stepGravity);
                 stage = SimulationFaultCode.Ecs;
-                if (executor.CompletedTick != progress.CompletedTick || executor.CompletedOrdinal != progress.CompletedOrdinal)
-                    throw new InvalidOperationException("Local and ECS completion diverged.");
-                executor.Execute(current, frame);
+                executor.Execute(current, frame, progress);
                 // Destruction inside group.Update quarantines the session and defers release.
                 if (State != SimulationLifecycle.Running || !progress.StepOpen) return;
                 stage = SimulationFaultCode.Configuration; ValidateRegisteredBindings();
-                progress.ValidateCompletion(current); executor.ValidatePending(current);
-                executor.PublishCompleted(current); progress.Complete(current);
+                executor.ValidatePending(current, progress);
+                // R3 commit boundary: validate the still-open reservation first,
+                // then Progress performs the sole completion write. The executor
+                // only releases its pending execution state after observing it.
+                progress.Complete(current);
+                executor.AcknowledgeAuthoritativeCompletion(current, progress);
+                // R4: local player state advances only after the authoritative
+                // progress and executor boundary both accepted this frame.
                 for (int i = 0; i < bindings.Length; ++i)
-                {
-                    var b = bindings[i]; var p = frame[i];
-                    b.Completed = new PlayerKinematicState(p.EndStateTick, ToVector(p.EndPosition), ToQuaternion(p.EndRotation),
-                        ToVector(p.EndVelocity), ToVector(p.EndAngularVelocity));
-                    b.Reader.Edges.AckThrough(b.EdgeWatermark);
-                }
+                    bindings[i].PublishStepFrame(frame[i]);
                 // A diagnostic failure after publication cannot turn a completed step into an aborted one.
                 try { Trace.Append(current, true, frame); }
                 catch (Exception error) { Fail(SimulationFaultCode.Capacity, "Completed step trace failed: " + error.Message); return; }
@@ -555,23 +569,6 @@ namespace OverTheHorizon.LocalSimulation
             }
             catch (Exception error) { Fail(stage, error); }
         }
-        private PlayerStepElement BuildFrame(Binding b, PlayerKinematicState end)
-        {
-            var s = b.Completed; var c = b.Accepted;
-            return new PlayerStepElement { Valid = 1, PlayerId = b.Id, SlotGeneration = 1,
-                Generation = current.Generation, ConsumedOrdinal = current.Ordinal, InputSequence = c.InputSequence,
-                EdgeHighWatermark = b.EdgeWatermark, StartStateTick = s.StateTick, EndStateTick = end.StateTick,
-                StartPosition = ToFloat(s.Position), StartVelocity = ToFloat(s.Velocity), StartRotation = ToMath(s.Rotation),
-                EndPosition = ToFloat(end.Position), EndVelocity = ToFloat(end.Velocity), EndAngularVelocity = ToFloat(end.AngularVelocity),
-                EndRotation = ToMath(end.Rotation), SteeringRotation = ToMath(c.SteeringRotation),
-                SteeringForward = ToFloat(c.SteeringForward), SteeringRight = ToFloat(c.SteeringRight), ViewForward = ToFloat(c.ViewForward),
-                Axes = ToFloat(c.Intent.MoveInput), Gravity = ToFloat(stepGravity), LogicalYaw = c.LogicalYaw,
-                LogicalPitch = c.LogicalPitch, FreeLook = (byte)(c.Intent.FreeLook ? 1 : 0), Maneuver = (byte)(c.Intent.Maneuver ? 1 : 0) };
-        }
-        private static float3 ToFloat(Vector3 v) => new float3(v.x, v.y, v.z);
-        private static quaternion ToMath(Quaternion q) => new quaternion(q.x, q.y, q.z, q.w);
-        private static Vector3 ToVector(float3 v) => new Vector3(v.x, v.y, v.z);
-        private static Quaternion ToQuaternion(quaternion q) => new Quaternion(q.value.x, q.value.y, q.value.z, q.value.w);
         private void OnFlightFailure(uint id, string message) { Fail(SimulationFaultCode.Flight, message, id); }
         private void Fail(SimulationFaultCode code, Exception error)
         {

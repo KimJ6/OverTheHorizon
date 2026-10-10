@@ -2,7 +2,11 @@ using System;
 
 namespace OverTheHorizon.Timing
 {
-    /// <summary>Single-writer progress. Reservation is not completion; faults never advance completion.</summary>
+    /// <summary>
+    /// R3 authoritative progress owner. Begin only reserves a context; Complete is the
+    /// only write to completed tick/ordinal, after the caller validates its effects.
+    /// A fault closes the reservation without advancing completion.
+    /// </summary>
     public sealed class SimulationProgress
     {
         public ulong Generation { get; private set; }
@@ -36,6 +40,8 @@ namespace OverTheHorizon.Timing
         }
         public void Complete(SimulationStepContext context)
         {
+            // Do not move this write into an executor or ECS component. They verify
+            // the reserved context, while this object records the authoritative result.
             ValidateCompletion(context);
             CompletedTick = context.Tick; CompletedOrdinal = context.Ordinal; StepOpen = false;
         }

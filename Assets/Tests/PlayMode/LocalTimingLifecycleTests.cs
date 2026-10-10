@@ -342,11 +342,9 @@ namespace OverTheHorizon.Tests
         {
             CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
             ulong completed = root.CompletedOrdinal; var registered = flight.Body; var replacement = CreateAlternateBody();
-            var executor = (CombatStepExecutor)GetField("executor");
             InvokePrivate(root, "PrePhysics"); InvokePrivate(flight, "FixedUpdate"); SetBody(replacement);
             LogAssert.Expect(LogType.Error, new Regex("Timing fault")); InvokePrivate(root, "PostPhysics");
             Assert.AreEqual(SimulationLifecycle.Faulted, root.State); Assert.AreEqual(completed, root.CompletedOrdinal);
-            Assert.AreEqual(completed, testWorld.EntityManager.GetComponentData<SimulationStepHeader>(executor.SessionEntity).CompletedOrdinal);
             Assert.AreEqual(Vector3.zero, replacement.linearVelocity); Assert.IsTrue(registered.isKinematic);
             SetBody(registered);
         }
@@ -372,7 +370,7 @@ namespace OverTheHorizon.Tests
             Assert.IsFalse(flight.InputReader.GameplayInputEnabled); Assert.IsFalse(flight.ViewState.GameplayViewEnabled);
             SetViewReader(flight.InputReader);
         }
-        [UnityTest] public IEnumerator DestroyedRootHandsCleanupToUpdateRecoveryWhileTimeIsZero()
+        [UnityTest] public IEnumerator DestroyedRootHandsCleanupToIndependentHostWhileTimeIsZero()
         {
             CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
             int attempts = 0;
@@ -399,8 +397,21 @@ namespace OverTheHorizon.Tests
                 LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[HookOrder\\]"));
                 yield return Until(() => root.State == SimulationLifecycle.Faulted);
                 Assert.AreEqual(completed, root.CompletedOrdinal);
-                var executor = (CombatStepExecutor)GetField("executor");
-                Assert.AreEqual(completed, executor.CompletedOrdinal);
+                Assert.AreEqual(0, flight.InputReader.Edges.Count);
+            }
+            finally { PlayerLoop.SetPlayerLoop(saved); }
+        }
+        [UnityTest] public IEnumerator ReorderedPreCannotCompleteAnotherActualFixedStep()
+        {
+            CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
+            ulong completed = root.CompletedOrdinal;
+            var saved = PlayerLoop.GetCurrentPlayerLoop();
+            try
+            {
+                var loop = PlayerLoop.GetCurrentPlayerLoop(); MovePreAfterScript(ref loop); PlayerLoop.SetPlayerLoop(loop);
+                LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[HookOrder\\]"));
+                yield return Until(() => root.State == SimulationLifecycle.Faulted);
+                Assert.AreEqual(completed, root.CompletedOrdinal);
                 Assert.AreEqual(0, flight.InputReader.Edges.Count);
             }
             finally { PlayerLoop.SetPlayerLoop(saved); }
@@ -431,7 +442,7 @@ namespace OverTheHorizon.Tests
             }
             finally { PlayerLoop.SetPlayerLoop(saved); }
         }
-        [UnityTest] public IEnumerator RemovedRecoveryHookAfterHandoffStillDrainsWithoutNewRoot()
+        [UnityTest] public IEnumerator DestroyedRootCleanupUsesOnlyTheIndependentHost()
         {
             CreateSession(); yield return Until(() => root.CompletedOrdinal >= 2);
             bool fail = true; int attempts = 0;
@@ -440,7 +451,7 @@ namespace OverTheHorizon.Tests
             LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
             UnityEngine.Object.DestroyImmediate(rootObject); rootObject = null;
             Assert.AreEqual(1, LocalSimulationBootstrap.PendingCleanupCount);
-            var loop = PlayerLoop.GetCurrentPlayerLoop(); RemoveRecovery(ref loop); PlayerLoop.SetPlayerLoop(loop);
+            Assert.AreEqual(0, CountNamed(PlayerLoop.GetCurrentPlayerLoop(), "RecoveryHook"));
             fail = false;
             yield return Until(() => LocalSimulationBootstrap.PendingCleanupCount == 0);
             Assert.AreEqual(3, attempts); Assert.IsFalse(flight.IsManaged); Assert.AreEqual(originalScale, Time.timeScale);
@@ -456,16 +467,22 @@ namespace OverTheHorizon.Tests
             }
             if (node.subSystemList != null) for (int i = 0; i < node.subSystemList.Length; ++i) MovePostBeforePhysics(ref node.subSystemList[i]);
         }
-        private static void RemoveRecovery(ref PlayerLoopSystem node)
+        private static void MovePreAfterScript(ref PlayerLoopSystem node)
         {
-            if (node.subSystemList == null) return;
-            var list = new List<PlayerLoopSystem>();
-            foreach (var original in node.subSystemList)
+            if (node.type == typeof(UnityEngine.PlayerLoop.FixedUpdate))
             {
-                if (original.type.Name == "RecoveryHook") continue;
-                var child = original; RemoveRecovery(ref child); list.Add(child);
+                var list = new List<PlayerLoopSystem>(node.subSystemList);
+                int pre = list.FindIndex(x => x.type.Name == "PreTimingHook"); var hook = list[pre]; list.RemoveAt(pre);
+                int script = list.FindIndex(x => x.type == typeof(UnityEngine.PlayerLoop.FixedUpdate.ScriptRunBehaviourFixedUpdate));
+                list.Insert(script + 1, hook); node.subSystemList = list.ToArray(); return;
             }
-            node.subSystemList = list.ToArray();
+            if (node.subSystemList != null) for (int i = 0; i < node.subSystemList.Length; ++i) MovePreAfterScript(ref node.subSystemList[i]);
+        }
+        private static int CountNamed(PlayerLoopSystem node, string name)
+        {
+            int count = node.type != null && node.type.Name == name ? 1 : 0;
+            if (node.subSystemList != null) foreach (var child in node.subSystemList) count += CountNamed(child, name);
+            return count;
         }
         [UnityTest] public IEnumerator PersistentDestroyedCleanupRetainsResourcesAndRejectsNewSession()
         {

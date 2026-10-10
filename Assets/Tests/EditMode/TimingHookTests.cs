@@ -30,7 +30,21 @@ namespace OverTheHorizon.Tests
             var loop = PlayerLoop.GetCurrentPlayerLoop(); Mutate(ref loop, "unrelated"); PlayerLoop.SetPlayerLoop(loop);
             Assert.DoesNotThrow(driver.ValidateInstalled);
         }
+        [Test] public void BridgeRetainsOnlyThePhysicsCompletionFence()
+        {
+            var loop = PlayerLoop.GetCurrentPlayerLoop();
+            Assert.AreEqual(1, CountNamed(loop, "PreTimingHook"));
+            Assert.AreEqual(1, CountNamed(loop, "PhysicsTimingFenceHook"));
+            Assert.AreEqual(1, CountNamed(loop, "PostTimingHook"));
+            Assert.AreEqual(0, CountNamed(loop, "ScriptTimingFenceHook"));
+        }
         private sealed class Unrelated { }
+        private static int CountNamed(PlayerLoopSystem node, string name)
+        {
+            int count = node.type != null && node.type.Name == name ? 1 : 0;
+            if (node.subSystemList != null) foreach (var child in node.subSystemList) count += CountNamed(child, name);
+            return count;
+        }
         private static void Mutate(ref PlayerLoopSystem node, string change)
         {
             if (node.type == typeof(UnityEngine.PlayerLoop.FixedUpdate))
