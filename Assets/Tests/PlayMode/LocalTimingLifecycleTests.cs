@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using NUnit.Framework;
+using Unity.Collections;
 using Unity.Entities;
+using Unity.Jobs;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.LowLevel;
@@ -24,7 +26,8 @@ namespace OverTheHorizon.Tests
         private LocalSimulationBootstrap root;
         private World testWorld, originalWorld;
         private float originalFixed, originalScale;
-        private void CreateSession(bool automatic = true, bool invalidSecondPlayer = false, bool secondPlayer = false)
+        private void CreateSession(bool automatic = true, bool invalidSecondPlayer = false, bool secondPlayer = false,
+            Action<CombatStepExecutor> configureExecution = null)
         {
             originalFixed = Time.fixedDeltaTime; originalScale = Time.timeScale;
             originalWorld = World.DefaultGameObjectInjectionWorld;
@@ -35,6 +38,7 @@ namespace OverTheHorizon.Tests
             playerObject.SetActive(true);
             rootObject = new GameObject("TimingTestRoot"); rootObject.SetActive(false);
             root = rootObject.AddComponent<LocalSimulationBootstrap>();
+            if (configureExecution != null) root.ConfigureExecution += configureExecution;
             PlayerFlightController second = null;
             if (secondPlayer)
             {
@@ -529,6 +533,120 @@ namespace OverTheHorizon.Tests
             yield return Until(() => observedExecuting && LocalSimulationBootstrap.PendingCleanupCount == 0);
             Assert.IsFalse(flight.IsManaged); Assert.IsFalse(flight.Body.isKinematic); Assert.AreEqual(originalScale, Time.timeScale);
         }
+        [UnityTest] public IEnumerator AuthorityJobResultCommitsBeforeBootstrapCompletesTheTick()
+        {
+            TestAuthorityProducerStage producer = null; TestAuthorityResolveCommitStage resolver = null;
+            CreateSession(false, configureExecution: executor =>
+            {
+                producer = executor.RegisterStage<TestAuthorityProducerStage>();
+                resolver = executor.RegisterStage<TestAuthorityResolveCommitStage>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            root.RequestStart(); yield return Until(() => root.CompletedOrdinal >= 1);
+            var result = testWorld.EntityManager.GetComponentData<TestAuthorityResult>(producer.ResultEntity);
+            var commit = testWorld.EntityManager.GetComponentData<TestAuthorityCommit>(producer.ResultEntity);
+            Assert.IsTrue(resolver.ObservedResultDependencyCompletion);
+            Assert.AreEqual(root.Generation, result.Generation); Assert.AreEqual(root.CompletedTick, result.Tick);
+            Assert.AreEqual(root.CompletedOrdinal, result.Ordinal); Assert.AreEqual(TestAuthorityProducerStage.ValidValue, result.Value);
+            Assert.AreEqual(result.Ordinal, commit.Ordinal); Assert.AreEqual(result.Value, commit.Value);
+            Assert.AreEqual((int)root.CompletedOrdinal, resolver.CommitCount);
+        }
+        [UnityTest] public IEnumerator InvalidAuthorityValueFaultsBeforeBootstrapCompletesTheTick()
+        {
+            TestAuthorityProducerStage producer = null;
+            CreateSession(false, configureExecution: executor =>
+            {
+                producer = executor.RegisterStage<TestAuthorityProducerStage>();
+                producer.Mode = TestAuthorityResultMode.InvalidValue;
+                executor.RegisterStage<TestAuthorityResolveCommitStage>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal); Assert.IsFalse(producer.ResultWasCommitted);
+        }
+        [UnityTest] public IEnumerator InvalidAuthorityContextFaultsBeforeBootstrapCompletesTheTick()
+        {
+            TestAuthorityProducerStage producer = null;
+            CreateSession(false, configureExecution: executor =>
+            {
+                producer = executor.RegisterStage<TestAuthorityProducerStage>();
+                producer.Mode = TestAuthorityResultMode.InvalidContext;
+                executor.RegisterStage<TestAuthorityResolveCommitStage>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal); Assert.IsFalse(producer.ResultWasCommitted);
+        }
+        [UnityTest] public IEnumerator DisabledAuthorityResolveStageBlocksBootstrapCompletion()
+        {
+            TestAuthorityResolveCommitStage resolver = null;
+            CreateSession(false, configureExecution: executor =>
+            {
+                executor.RegisterStage<TestAuthorityProducerStage>();
+                resolver = executor.RegisterStage<TestAuthorityResolveCommitStage>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            resolver.Enabled = false;
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal);
+        }
+        [UnityTest] public IEnumerator MissingAuthorityResolveStageBlocksBootstrapCompletion()
+        {
+            TestAuthorityProducerStage producer = null;
+            CreateSession(false, configureExecution: executor => producer = executor.RegisterStage<TestAuthorityProducerStage>());
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal); Assert.IsTrue(producer.RejectedMissingResolver);
+        }
+        [UnityTest] public IEnumerator DestroyedSessionCompletesTrackedAuthorityJobsBeforeReleasingTheirResources()
+        {
+            TestAuthorityProducerStage producer = null; bool destroyedWhileExecuting = false;
+            CreateSession(false, configureExecution: executor =>
+            {
+                producer = executor.RegisterStage<TestAuthorityProducerStage>();
+                executor.RegisterStage<TestAuthorityResolveCommitStage>();
+                producer.DestroySession = () =>
+                {
+                    destroyedWhileExecuting = executor.IsExecuting;
+                    UnityEngine.Object.DestroyImmediate(rootObject); rootObject = null;
+                };
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
+            LogAssert.Expect(LogType.Error, new Regex("Timing cleanup failed"));
+            root.RequestStart();
+            yield return Until(() => producer.Disposed);
+            Assert.IsTrue(destroyedWhileExecuting);
+            Assert.IsTrue(producer.EcsDependencyCompletedBeforeRelease);
+            Assert.IsTrue(producer.ExternalJobCompletedBeforeRelease);
+            Assert.IsTrue(producer.ResultEntityReleasedAfterDependencyCompletion);
+            Assert.AreEqual(0, LocalSimulationBootstrap.PendingCleanupCount);
+        }
+        [UnityTest] public IEnumerator StopRequestedDuringAuthorityJobsDefersReleaseUntilTheStepIsSafe()
+        {
+            TestAuthorityProducerStage producer = null; bool requestedWhileExecuting = false;
+            CreateSession(false, configureExecution: executor =>
+            {
+                producer = executor.RegisterStage<TestAuthorityProducerStage>();
+                executor.RegisterStage<TestAuthorityResolveCommitStage>();
+                producer.RequestStop = () =>
+                {
+                    requestedWhileExecuting = executor.IsExecuting;
+                    root.RequestStop();
+                };
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Stopped && producer.Disposed);
+            Assert.IsTrue(requestedWhileExecuting);
+            Assert.IsTrue(producer.EcsDependencyCompletedBeforeRelease);
+            Assert.IsTrue(producer.ExternalJobCompletedBeforeRelease);
+            Assert.IsTrue(producer.ResultEntityReleasedAfterDependencyCompletion);
+        }
         [TestCase(50)] [TestCase(60)] [TestCase(120)]
         public void TimingOwnerUsesNativeReadbackAndRestoresGlobals(int rate)
         {
@@ -582,6 +700,116 @@ namespace OverTheHorizon.Tests
         protected override void OnStep()
         {
             var callback = DestroyRoot; DestroyRoot = null; callback?.Invoke();
+        }
+    }
+    public enum TestAuthorityResultMode { Valid, InvalidValue, InvalidContext }
+    public struct TestAuthorityResult : IComponentData
+    {
+        public ulong Generation, Ordinal;
+        public uint Tick;
+        public int Value;
+    }
+    public struct TestAuthorityCommit : IComponentData
+    {
+        public ulong Generation, Ordinal;
+        public uint Tick;
+        public int Value;
+    }
+    [DisableAutoCreation]
+    [UpdateAfter(typeof(SimulationEntrySystem))]
+    [UpdateBefore(typeof(SimulationCompleteSystem))]
+    public partial class TestAuthorityProducerStage : CombatStepSystem
+    {
+        internal const int ValidValue = 73;
+        private NativeArray<int> externalLifetime;
+        public TestAuthorityResultMode Mode;
+        public Action DestroySession;
+        public Action RequestStop;
+        public Entity ResultEntity { get; private set; }
+        public bool RejectedMissingResolver { get; private set; }
+        public bool ResultWasCommitted { get; internal set; }
+        public bool IsScheduledResultDependencyComplete => Dependency.IsCompleted;
+        public bool Disposed { get; private set; }
+        public bool EcsDependencyCompletedBeforeRelease { get; private set; }
+        public bool ExternalJobCompletedBeforeRelease { get; private set; }
+        public bool ResultEntityReleasedAfterDependencyCompletion { get; private set; }
+        protected override void OnCreate()
+        {
+            ResultEntity = EntityManager.CreateEntity(typeof(TestAuthorityResult), typeof(TestAuthorityCommit));
+            externalLifetime = new NativeArray<int>(1, Allocator.Persistent);
+        }
+        protected override void OnStep()
+        {
+            if (World.GetExistingSystemManaged<TestAuthorityResolveCommitStage>() == null)
+            {
+                RejectedMissingResolver = true;
+                throw new InvalidOperationException("The test authority feature requires its Resolve/Commit stage.");
+            }
+            var context = Step;
+            var resultOrdinal = Mode == TestAuthorityResultMode.InvalidContext
+                ? context.Ordinal + 1
+                : context.Ordinal;
+            Dependency = new WriteAuthorityResultJob
+            {
+                Results = GetComponentLookup<TestAuthorityResult>(false), Entity = ResultEntity,
+                Generation = context.Generation, Tick = context.Tick, Ordinal = resultOrdinal,
+                Value = Mode == TestAuthorityResultMode.InvalidValue ? -1 : ValidValue
+            }.Schedule(Dependency);
+            if (DestroySession == null && RequestStop == null) return;
+            RegisterExternalStepJob(new WriteExternalLifetimeJob { Value = externalLifetime }.Schedule());
+            var stop = RequestStop; RequestStop = null; stop?.Invoke();
+            if (DestroySession == null) return;
+            var callback = DestroySession; DestroySession = null; callback();
+            throw new InvalidOperationException("The test authority session was destroyed after scheduling its jobs.");
+        }
+        protected override void OnDestroy()
+        {
+            // World.DestroySystemManaged is the low-frequency disposal boundary. The
+            // test records Unity's actual dependency completion before releasing data.
+            EcsDependencyCompletedBeforeRelease = Dependency.IsCompleted;
+            ExternalJobCompletedBeforeRelease = externalLifetime.IsCreated && externalLifetime[0] == 1;
+            if (EntityManager.Exists(ResultEntity)) EntityManager.DestroyEntity(ResultEntity);
+            ResultEntityReleasedAfterDependencyCompletion = !EntityManager.Exists(ResultEntity);
+            if (externalLifetime.IsCreated) externalLifetime.Dispose();
+            Disposed = true;
+        }
+        private struct WriteAuthorityResultJob : IJob
+        {
+            public ComponentLookup<TestAuthorityResult> Results;
+            public Entity Entity;
+            public ulong Generation, Ordinal;
+            public uint Tick;
+            public int Value;
+            public void Execute()
+            {
+                Results[Entity] = new TestAuthorityResult
+                { Generation = Generation, Tick = Tick, Ordinal = Ordinal, Value = Value };
+            }
+        }
+        private struct WriteExternalLifetimeJob : IJob
+        { public NativeArray<int> Value; public void Execute() { Value[0] = 1; } }
+    }
+    [DisableAutoCreation]
+    [UpdateAfter(typeof(TestAuthorityProducerStage))]
+    [UpdateBefore(typeof(SimulationCompleteSystem))]
+    public partial class TestAuthorityResolveCommitStage : CombatStepSystem
+    {
+        public bool ObservedResultDependencyCompletion { get; private set; }
+        public int CommitCount { get; private set; }
+        protected override void OnStep()
+        {
+            var producer = World.GetExistingSystemManaged<TestAuthorityProducerStage>();
+            if (producer == null || !EntityManager.Exists(producer.ResultEntity))
+                throw new InvalidOperationException("The test authority result is unavailable.");
+            EntityManager.CompleteDependencyBeforeRO<TestAuthorityResult>();
+            ObservedResultDependencyCompletion = producer.IsScheduledResultDependencyComplete;
+            var result = EntityManager.GetComponentData<TestAuthorityResult>(producer.ResultEntity);
+            if (!ObservedResultDependencyCompletion || result.Generation != Step.Generation || result.Tick != Step.Tick
+                || result.Ordinal != Step.Ordinal || result.Value != TestAuthorityProducerStage.ValidValue)
+                throw new InvalidOperationException("The test authority result is invalid for this step.");
+            EntityManager.SetComponentData(producer.ResultEntity, new TestAuthorityCommit
+            { Generation = result.Generation, Tick = result.Tick, Ordinal = result.Ordinal, Value = result.Value });
+            producer.ResultWasCommitted = true; ++CommitCount;
         }
     }
 }
