@@ -6,7 +6,7 @@ namespace OverTheHorizon.Simulation
 {
     public struct SimulationStepHeader : IComponentData
     {
-        // R3: this is the current ECS execution context, not a second
+        // This is the current ECS execution context, not a second
         // completion ledger. SimulationProgress is the sole completion owner.
         public ulong Generation, Ordinal;
         public uint Tick;

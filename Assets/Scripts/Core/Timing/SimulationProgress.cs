@@ -3,7 +3,7 @@ using System;
 namespace OverTheHorizon.Timing
 {
     /// <summary>
-    /// R3 authoritative progress owner. Begin only reserves a context; Complete is the
+    /// Authoritative progress owner. Begin only reserves a context; Complete is the
     /// only write to completed tick/ordinal, after the caller validates its effects.
     /// A fault closes the reservation without advancing completion.
     /// </summary>

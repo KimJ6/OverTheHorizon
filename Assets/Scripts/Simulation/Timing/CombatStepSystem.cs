@@ -14,7 +14,7 @@ namespace OverTheHorizon.Simulation
     {
         private CombatStepExecutor executor;
         private bool insideStep;
-        // R2 only tracks jobs that access external NativeContainers. ECS component
+        // This tracks only jobs that access external NativeContainers. ECS component
         // dependencies remain on SystemBase.Dependency and are not force-completed here.
         private JobHandle externalJobDependency;
         private bool hasExternalJobDependency;
@@ -31,7 +31,7 @@ namespace OverTheHorizon.Simulation
         {
             var owner = executor;
             if (owner == null) throw new InvalidOperationException("Combat stage has no owner.");
-            if (!owner.TryBeginStage(this)) return; // R1 fail-stop gate for Unity's normal group loop.
+            if (!owner.TryBeginStage(this)) return; // Fail-stop gate for Unity's normal group loop.
 
             Step = owner.CurrentStep;
             SessionEntity = owner.SessionEntity;
@@ -42,7 +42,7 @@ namespace OverTheHorizon.Simulation
             finally
             {
                 insideStep = false;
-                // R2: ECS-managed work remains on Dependency. Only jobs that touch
+                // ECS-managed work remains on Dependency. Only jobs that touch
                 // external NativeContainers are completed before their results are read.
                 try { CompleteExternalStepJobs(); }
                 catch (Exception error) { failure = failure == null ? error : new AggregateException(failure, error); }
@@ -56,6 +56,8 @@ namespace OverTheHorizon.Simulation
             else owner.ReportStageCompleted(this);
         }
         protected abstract void OnStep();
+        protected bool HasSealedStage<T>() where T : CombatStepSystem
+            => executor != null && executor.HasSealedStage<T>();
         // Called after registered external jobs complete. ECS Dependency work must not require an immediate host read.
         protected virtual void ValidateResult() { }
         protected void RegisterExternalStepJob(JobHandle job)

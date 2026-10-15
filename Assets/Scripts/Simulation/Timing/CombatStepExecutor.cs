@@ -11,7 +11,7 @@ namespace OverTheHorizon.Simulation
     public enum CombatExecutionState
     {
         Preparing, Ready, Executing,
-        // R3: execution has succeeded, but only SimulationProgress may commit it.
+        // Execution has succeeded, but only SimulationProgress may commit it.
         // This gate prevents another Execute call until that commit is acknowledged.
         PendingPublication,
         Faulted, Disposed
@@ -24,7 +24,7 @@ namespace OverTheHorizon.Simulation
         private readonly ulong generation;
         private readonly SimulationTimingConfig config;
         private readonly List<CombatStepSystem> owned = new List<CombatStepSystem>();
-        // R1 ownership split: Unity owns ordering/execution; the executor owns the
+        // Unity owns ordering/execution; the executor owns the
         // invocation boundary and validates the sealed membership/order snapshot.
         private CombatFixedStepSystemGroup group;
         private CombatStepSystem[] orderedStages;
@@ -35,7 +35,7 @@ namespace OverTheHorizon.Simulation
         private Entity entity;
         private bool initialized, executing, timePushed;
         private SimulationStepContext executed;
-        // R7: the pending publication belongs to the exact Progress instance
+        // Pending publication belongs to the exact Progress instance
         // that reserved it. Matching values alone must not transfer authority.
         private SimulationProgress executingProgress;
         public CombatExecutionState State { get; private set; } = CombatExecutionState.Preparing;
@@ -100,6 +100,16 @@ namespace OverTheHorizon.Simulation
                 throw new InvalidOperationException("Stages can only be registered while preparing.");
             return CreateStage<T>();
         }
+        internal bool HasSealedStage<T>() where T : CombatStepSystem
+        {
+            // A World can contain unrelated systems. Only this snapshot was both executor-owned
+            // and observed in the combat group when Seal completed.
+            if (orderedStages == null || State == CombatExecutionState.Preparing || State == CombatExecutionState.Disposed)
+                return false;
+            for (int i = 0; i < orderedStages.Length; ++i)
+                if (orderedStages[i] is T) return true;
+            return false;
+        }
         public void Seal()
         {
             if (!initialized || State != CombatExecutionState.Preparing)
@@ -120,7 +130,7 @@ namespace OverTheHorizon.Simulation
             if (stages.Count != owned.Count || !ReferenceEquals(stages[0], entry)
                 || !ReferenceEquals(stages[stages.Count - 1], exit))
                 throw new InvalidOperationException("Unity combat group order must be Entry -> stages -> Exit.");
-            orderedStages = stages.ToArray(); // R1 snapshot used only for fail-stop validation.
+            orderedStages = stages.ToArray(); // Snapshot used only for fail-stop validation.
             State = CombatExecutionState.Ready;
         }
         public void Execute(SimulationStepContext context, NativeArray<PlayerStepElement> players, SimulationProgress progress)
@@ -130,7 +140,7 @@ namespace OverTheHorizon.Simulation
             if (context.Generation != generation || context.ConfigVersion != config.Version || context.TickRate != config.TickRate
                 || context.DeltaTime != config.FixedDeltaTime)
                 throw new InvalidOperationException("Step progress or session configuration mismatch.");
-            // R3: only SimulationProgress can establish that this context is
+            // Only SimulationProgress can establish that this context is
             // the one open authoritative step. The executor never keeps a
             // second completed tick/ordinal ledger.
             if (progress == null) throw new ArgumentNullException(nameof(progress));
@@ -150,7 +160,7 @@ namespace OverTheHorizon.Simulation
                 world.PushTime(new TimeData(context.EndTime, context.DeltaTime)); timePushed = true;
                 if (group.RateManager != null) throw new InvalidOperationException("Combat rate manager was replaced.");
                 ValidateGroupMembership(); // Reject late group mutation before it can run gameplay.
-                group.Update(); // R1: the sole Unity ComponentSystemGroup update for this step.
+                group.Update(); // The sole Unity ComponentSystemGroup update for this step.
                 if (stageFailure != null) ExceptionDispatchInfo.Capture(stageFailure).Throw();
                 RequireExecuting();
                 if (orderedStages == null || nextStageIndex != orderedStages.Length)
@@ -233,7 +243,7 @@ namespace OverTheHorizon.Simulation
                 throw new InvalidOperationException("Pending acknowledgement belongs to a different SimulationProgress instance.");
             try
             {
-                // R3: acknowledgement is a state release only. Progress wrote
+                // Acknowledgement is a state release only. Progress wrote
                 // the authoritative completion before this method is called.
                 if (progress.StepOpen || progress.Faulted || progress.Generation != context.Generation
                     || progress.CompletedTick != context.Tick || progress.CompletedOrdinal != context.Ordinal)
@@ -267,7 +277,7 @@ namespace OverTheHorizon.Simulation
                 for (int i = owned.Count - 1; i >= 0; --i)
                 {
                     var stage = owned[i]; if (stage == null) continue;
-                    // R1: detach before destruction so the standard group never retains a dead member.
+                    // Detach before destruction so the standard group never retains a dead member.
                     try { group?.RemoveSystemFromUpdateList(stage); world.DestroySystemManaged(stage); owned[i] = null; }
                     catch (Exception error) { errors.Add(error); }
                 }

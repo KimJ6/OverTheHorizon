@@ -44,7 +44,7 @@ namespace OverTheHorizon.LocalSimulation
         }
         public void ValidateInstalled()
         {
-            // R5 boundary check: creation and Ready/Paused -> Running validate the
+            // Creation and Ready/Paused -> Running validate the
             // installed loop once. Fixed steps deliberately do not traverse the
             // PlayerLoop; the callbacks below detect their own live ordering.
             var loop = PlayerLoop.GetCurrentPlayerLoop();

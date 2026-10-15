@@ -41,7 +41,7 @@ namespace OverTheHorizon.Simulation
         { candidates = GetEntityQuery(ComponentType.ReadOnly<CombatTargetCandidate>(), ComponentType.ReadWrite<CombatTargetEvaluation>()); }
         protected override void OnStep()
         {
-            if (World.GetExistingSystemManaged<AutoTargetingResolveCommitSystem>() == null)
+            if (!HasSealedStage<AutoTargetingResolveCommitSystem>())
                 throw new InvalidOperationException("Auto targeting requires its Resolve/Commit stage.");
             if (!EntityManager.HasComponent<CombatTargetAssignment>(SessionEntity))
                 EntityManager.AddComponentData(SessionEntity, default(CombatTargetAssignment));

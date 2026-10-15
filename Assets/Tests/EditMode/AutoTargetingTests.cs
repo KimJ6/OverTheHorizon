@@ -42,6 +42,20 @@ namespace OverTheHorizon.Tests
                 Assert.AreEqual(1ul, progress.CompletedOrdinal); return assignment;
             }
         }
+        private static CombatTargetAssignment RunWithPositions(World world, params (ulong StableId, float3 Position)[] candidates)
+        {
+            using (var executor = new CombatStepExecutor(world, 1, new SimulationTimingConfig(50)))
+            using (var frames = new NativeArray<PlayerStepElement>(4, Allocator.TempJob))
+            {
+                executor.RegisterStage<AutoTargetingProducerSystem>(); executor.RegisterStage<AutoTargetingResolveCommitSystem>(); executor.Seal();
+                foreach (var candidate in candidates) Add(world, candidate.StableId, candidate.Position);
+                var progress = Begin(out var step); var writable = frames; writable[0] = Player(step);
+                executor.Execute(step, frames, progress); executor.ValidatePending(step, progress);
+                var assignment = world.EntityManager.GetComponentData<CombatTargetAssignment>(executor.SessionEntity);
+                progress.Complete(step); executor.AcknowledgeAuthoritativeCompletion(step, progress);
+                Assert.AreEqual(1ul, progress.CompletedOrdinal); return assignment;
+            }
+        }
         [Test] public void JobResolveCommitsTheBestEligibleStableTarget()
         {
             using (var world = new World("Target normal"))
@@ -66,6 +80,24 @@ namespace OverTheHorizon.Tests
             {
                 var assignment = Run(world, new ulong[] { 99, 7, 42 });
                 Assert.AreEqual(7ul, assignment.TargetStableId);
+            }
+        }
+        [Test] public void ViewDotWinsBeforeDistance()
+        {
+            using (var world = new World("Target view priority"))
+            {
+                var assignment = RunWithPositions(world,
+                    (10ul, new float3(0, 0, 30)), (20ul, new float3(10, 0, 10)));
+                Assert.AreEqual(10ul, assignment.TargetStableId);
+            }
+        }
+        [Test] public void DistanceWinsWhenViewDotIsEqual()
+        {
+            using (var world = new World("Target distance priority"))
+            {
+                var assignment = RunWithPositions(world,
+                    (10ul, new float3(0, 0, 30)), (20ul, new float3(0, 0, 10)));
+                Assert.AreEqual(20ul, assignment.TargetStableId);
             }
         }
         [Test] public void NoEligibleTargetCommitsExplicitNoTarget()

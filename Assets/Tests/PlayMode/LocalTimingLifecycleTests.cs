@@ -7,6 +7,7 @@ using NUnit.Framework;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.LowLevel;
@@ -601,6 +602,81 @@ namespace OverTheHorizon.Tests
             LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
             yield return Until(() => root.State == SimulationLifecycle.Faulted);
             Assert.AreEqual(0ul, root.CompletedOrdinal); Assert.IsTrue(producer.RejectedMissingResolver);
+        }
+        [UnityTest] public IEnumerator AutoTargetingBootstrapCommitsActualJobResultBeforeCompletion()
+        {
+            CombatStepExecutor executor = null;
+            CreateSession(false, configureExecution: value =>
+            {
+                executor = value;
+                value.RegisterStage<AutoTargetingProducerSystem>();
+                value.RegisterStage<AutoTargetingResolveCommitSystem>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            var target = testWorld.EntityManager.CreateEntity(typeof(CombatTargetCandidate), typeof(CombatTargetEvaluation));
+            testWorld.EntityManager.SetComponentData(target, new CombatTargetCandidate
+            { StableId = 42, Anchor = new float3(0, 0, 10), Targetable = 1 });
+            root.RequestStart(); yield return Until(() => root.CompletedOrdinal >= 1);
+            var assignment = testWorld.EntityManager.GetComponentData<CombatTargetAssignment>(executor.SessionEntity);
+            Assert.AreEqual(1, assignment.HasTarget); Assert.AreEqual(42ul, assignment.TargetStableId);
+            Assert.AreEqual(root.Generation, assignment.Generation); Assert.AreEqual(root.CompletedTick, assignment.Tick);
+            Assert.AreEqual(root.CompletedOrdinal, assignment.Ordinal);
+        }
+        [UnityTest] public IEnumerator CorruptAutoTargetingEvaluationFaultsBeforeBootstrapCompletion()
+        {
+            CombatStepExecutor executor = null; AutoTargetingProducerSystem producer = null;
+            CreateSession(false, configureExecution: value =>
+            {
+                executor = value;
+                producer = value.RegisterStage<AutoTargetingProducerSystem>(); producer.CorruptNextResult = true;
+                value.RegisterStage<AutoTargetingResolveCommitSystem>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            var target = testWorld.EntityManager.CreateEntity(typeof(CombatTargetCandidate), typeof(CombatTargetEvaluation));
+            testWorld.EntityManager.SetComponentData(target, new CombatTargetCandidate
+            { StableId = 42, Anchor = new float3(0, 0, 10), Targetable = 1 });
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal);
+            var assignment = testWorld.EntityManager.GetComponentData<CombatTargetAssignment>(executor.SessionEntity);
+            Assert.AreEqual(0, assignment.HasTarget); Assert.AreEqual(0ul, assignment.TargetStableId);
+        }
+        [UnityTest] public IEnumerator DisabledAutoTargetingResolverBlocksBootstrapCompletion()
+        {
+            CombatStepExecutor executor = null; AutoTargetingResolveCommitSystem resolver = null;
+            CreateSession(false, configureExecution: value =>
+            {
+                executor = value;
+                value.RegisterStage<AutoTargetingProducerSystem>();
+                resolver = value.RegisterStage<AutoTargetingResolveCommitSystem>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            resolver.Enabled = false;
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted);
+            Assert.AreEqual(0ul, root.CompletedOrdinal);
+            var assignment = testWorld.EntityManager.GetComponentData<CombatTargetAssignment>(executor.SessionEntity);
+            Assert.AreEqual(0, assignment.HasTarget);
+        }
+        [UnityTest] public IEnumerator ResolverOutsideCombatGroupCannotPermitAutoTargetingCompletion()
+        {
+            CombatStepExecutor executor = null;
+            CreateSession(false, configureExecution: value =>
+            {
+                executor = value;
+                // Existence alone is insufficient: this Resolver is deliberately not executor-owned or grouped.
+                value.World.GetOrCreateSystemManaged<AutoTargetingResolveCommitSystem>();
+                value.RegisterStage<AutoTargetingProducerSystem>();
+            });
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+            var target = testWorld.EntityManager.CreateEntity(typeof(CombatTargetCandidate), typeof(CombatTargetEvaluation));
+            testWorld.EntityManager.SetComponentData(target, new CombatTargetCandidate
+            { StableId = 42, Anchor = new float3(0, 0, 10), Targetable = 1 });
+            LogAssert.Expect(LogType.Error, new Regex("Timing fault \\[Ecs\\]")); root.RequestStart();
+            yield return Until(() => root.State == SimulationLifecycle.Faulted || root.CompletedOrdinal >= 1);
+            Assert.AreEqual(SimulationLifecycle.Faulted, root.State);
+            Assert.AreEqual(0ul, root.CompletedOrdinal);
+            Assert.IsFalse(testWorld.EntityManager.HasComponent<CombatTargetAssignment>(executor.SessionEntity));
         }
         [UnityTest] public IEnumerator DestroyedSessionCompletesTrackedAuthorityJobsBeforeReleasingTheirResources()
         {

@@ -34,7 +34,7 @@ namespace OverTheHorizon.LocalSimulation
             public ulong EdgeWatermark;
             public bool CreatedPublisher, ManagedBound, OriginalInputEnabled, OriginalViewEnabled;
 
-            // R4 player bridge: Bootstrap owns the session, while a Binding owns
+            // Bootstrap owns the session, while a Binding owns
             // the per-player handoff from accepted input through physics to ECS data.
             public void AcceptInputForStep(uint completedTick)
             {
@@ -56,8 +56,8 @@ namespace OverTheHorizon.LocalSimulation
             }
             public PlayerStepElement CaptureStepFrame(SimulationStepContext context, Vector3 gravity)
             {
-                // R5 has no Script timing fence. The Flight context is therefore
-                // the live witness that Pre ran before ScriptRunBehaviourFixedUpdate;
+                // The Flight context is the live witness that Pre ran before
+                // ScriptRunBehaviourFixedUpdate;
                 // a reordered pre hook faults instead of publishing stale physics.
                 // Capture is observational; ECS validation still decides success.
                 if (Flight.AppliedGeneration != context.Generation || Flight.AppliedOrdinal != context.Ordinal)
@@ -66,7 +66,7 @@ namespace OverTheHorizon.LocalSimulation
             }
             public void PublishStepFrame(PlayerStepElement frame)
             {
-                // The caller invokes this only after the R3 authoritative commit.
+                // The caller invokes this only after the authoritative commit.
                 // Advancing a local snapshot or input watermark is never a commit.
                 Completed = LocalPlayerStatePublisher.ReadCompleted(frame);
                 Reader.Edges.AckThrough(EdgeWatermark);
@@ -491,7 +491,7 @@ namespace OverTheHorizon.LocalSimulation
         {
             ValidateRegisteredBindings();
             owner.Validate();
-            // R5: installation is checked at the Ready/Paused -> Running boundary.
+            // Installation is checked at the Ready/Paused -> Running boundary.
             // Running steps use the retained native-physics fence instead of polling
             // and traversing the PlayerLoop once per audit interval.
             try { driver.ValidateInstalled(); }
@@ -553,12 +553,12 @@ namespace OverTheHorizon.LocalSimulation
                 if (State != SimulationLifecycle.Running || !progress.StepOpen) return;
                 stage = SimulationFaultCode.Configuration; ValidateRegisteredBindings();
                 executor.ValidatePending(current, progress);
-                // R3 commit boundary: validate the still-open reservation first,
+                // Validate the still-open reservation first,
                 // then Progress performs the sole completion write. The executor
                 // only releases its pending execution state after observing it.
                 progress.Complete(current);
                 executor.AcknowledgeAuthoritativeCompletion(current, progress);
-                // R4: local player state advances only after the authoritative
+                // Local player state advances only after the authoritative
                 // progress and executor boundary both accepted this frame.
                 for (int i = 0; i < bindings.Length; ++i)
                     bindings[i].PublishStepFrame(frame[i]);

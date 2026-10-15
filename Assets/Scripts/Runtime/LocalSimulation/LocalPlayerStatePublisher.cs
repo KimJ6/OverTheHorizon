@@ -27,7 +27,7 @@ namespace OverTheHorizon.LocalSimulation
         public static PlayerKinematicState CaptureInitial(PlayerPhysicsSuspension suspension)
             => new PlayerKinematicState(0, suspension.Position, suspension.Rotation, suspension.Velocity, suspension.AngularVelocity);
 
-        // R4: this class owns the explicit local-physics <-> ECS data boundary.
+        // This class owns the explicit local-physics <-> ECS data boundary.
         // It maps only an already accepted input and captured body state; it does
         // not reserve, complete, or otherwise own the simulation step.
         public static PlayerStepElement BuildStepFrame(uint playerId, PlayerKinematicState completed,
