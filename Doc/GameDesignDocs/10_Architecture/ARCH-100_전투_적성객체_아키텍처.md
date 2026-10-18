@@ -3,8 +3,8 @@ document_id: ARCH-100
 title: 전투·적성 객체 아키텍처
 document_type: architecture
 status: canonical
-revision: 1.0
-last_updated: '2026-09-24'
+revision: 1.1
+last_updated: '2026-10-18'
 scope:
 - combat runtime
 - encounter activation
@@ -18,6 +18,7 @@ scope:
 depends_on:
 - PRJ-000
 interfaces:
+- ARCH-110
 - SYS-120
 - SYS-130
 - SYS-160
@@ -39,9 +40,12 @@ source_documents:
 
 플레이어 운동, 무기별 Target Selection, Missile Guidance, 개별 적의 전술·무장·수치는 각 System이 결정한다. Group·Budget·Pool·Simulation LOD의 최종값과 Network·Rendering 구현 경로는 프로파일링과 구현 단계에서 결정한다.
 
+로컬 고정 스텝의 PlayerLoop·Physics 연결, ECS Stage의 실제 실행 순서 검증, Job 결과 소비 경계, `SimulationProgress`의 완료 기록과 정리 복구는 [ARCH-110](ARCH-110_공용_타이밍_실행_계약.md)이 소유한다. 본 문서는 그 실행 기반 위에서 어떤 Gameplay 결과를 어떤 논리 Phase와 권위 정책으로 확정할지를 결정한다.
+
 ### 0.3 관련 Owner
 
 - 프로젝트 목표와 공통 기술 방향: [PRJ-000](../00_Project/PRJ-000_프로젝트_통합기획_기준서.md)
+- 공용 고정 스텝 실행·완료 기록·ECS 실행 수명주기: [ARCH-110](ARCH-110_공용_타이밍_실행_계약.md)
 - 플레이어 무기의 후보 평가와 Target 선택: [SYS-120](../20_Systems/SYS-120_자동타게팅_직사화기.md)
 - Missile 행동·Guidance·요격·연출: [SYS-130](../20_Systems/SYS-130_미사일_이타노서커스.md)
 - 군도 구획의 Gameplay 의미와 보상·작전 상태: [SYS-160](../20_Systems/SYS-160_군도작전_전방지원.md)
@@ -170,6 +174,8 @@ ECS, Burst, Jobs를 적용하기 전에 불필요한 판단을 제거하고 대�
 
 Gameplay 결과에 영향을 주는 Phase 순서를 명시한다.
 
+이 순서는 Gameplay 결과의 논리적 Phase 모델이다. 로컬 Unity PlayerLoop에서 이 Phase를 언제 실행하고 완료로 기록하는지는 [ARCH-110](ARCH-110_공용_타이밍_실행_계약.md)의 실행 계약을 따른다.
+
 ```text
 ──────────── Simulation Tick N ────────────
 
@@ -249,6 +255,8 @@ Movement Tick
 | SpawnSource | Event / Due Tick |
 | Spatial membership | Cell 변화 또는 rebuild tick |
 | Network Snapshot | 별도 저빈도 |
+
+이 표의 60Hz는 대량 전투 Profiling을 위한 시작 후보이며, 현재 로컬 실행기의 기본값이나 지원 TickRate 계약은 ARCH-110을 따른다.
 
 ### 3.3 Timing Bucket / Timing Wheel
 
