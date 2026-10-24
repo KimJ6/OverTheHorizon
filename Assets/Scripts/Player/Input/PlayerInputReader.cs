@@ -9,10 +9,10 @@ namespace OverTheHorizon.Player.Input
     /// Unity Input System raw input을 View/Flight가 소비하는 현재 상태로 변환한다.
     ///
     /// Flight Core의 일반 이동은 Press/Release 이벤트를 사용하지 않는다.
-    /// FixedUpdate 시점의 ReadControlIntent() 스냅샷만 진실값으로 사용하므로,
+    /// Dynamic Update 이후 한 번 수집한 캐시를 View/Flight가 공유하므로,
     /// A -> W 같은 입력 전환에서 중간 이벤트 순서가 운동방향을 오염시키지 않는다.
     /// </summary>
-    [DefaultExecutionOrder(-100)]
+    [DefaultExecutionOrder(-300)]
     [DisallowMultipleComponent]
     public sealed class PlayerInputReader : MonoBehaviour
     {
@@ -51,6 +51,42 @@ namespace OverTheHorizon.Player.Input
         public bool IsReady { get; private set; }
         public bool UsingRuntimeFallback => runtimeFallbackMap != null;
         public bool HasManeuverAction => maneuverAction != null;
+        public bool GameplayInputEnabled => gameplayInputEnabled;
+
+        private ulong rawSequence;
+        private bool gameplayInputEnabled = true;
+        private bool discardNextLook;
+        public RawControlSnapshot RawSnapshot { get; private set; }
+        public string LastInputError { get; private set; }
+        public InputEdgeBuffer Edges { get; } = new InputEdgeBuffer(32);
+
+        private void Update()
+        {
+            if (!IsReady) { RawSnapshot = default; return; }
+            try
+            {
+                float axial = axialAction.ReadValue<float>();
+                float lateral = lateralAction.ReadValue<float>();
+                float vertical = verticalAction.ReadValue<float>();
+                Vector2 look = lookAction.ReadValue<Vector2>();
+                bool valid = PlayerValueValidation.Finite(axial) && PlayerValueValidation.Finite(lateral)
+                    && PlayerValueValidation.Finite(vertical) && PlayerValueValidation.Finite(look.x) && PlayerValueValidation.Finite(look.y);
+                ControlIntent intent = gameplayInputEnabled
+                    ? new ControlIntent(axial, lateral, vertical, freeLookAction.IsPressed(), maneuverAction != null && maneuverAction.IsPressed())
+                    : default;
+                if (!gameplayInputEnabled || discardNextLook) look = Vector2.zero;
+                discardNextLook = false;
+                RawSnapshot = new RawControlSnapshot(checked(++rawSequence), intent, look, valid);
+                LastInputError = valid ? null : "Non-finite input.";
+            }
+            catch (Exception ex) { RawSnapshot = default; LastInputError = ex.Message; }
+        }
+        public void SetGameplayInputEnabled(bool enabled)
+        { gameplayInputEnabled = enabled; discardNextLook = true; RawSnapshot = default; }
+        // Session boundaries cancel events; pause/fault only invalidate continuous input.
+        public void ResetInputCache() { RawSnapshot = default; Edges.Clear(); }
+        public void EnqueueGameplayEdge(uint kind) { if (gameplayInputEnabled) Edges.Enqueue(kind); }
+        private void OnDestroy() { runtimeFallbackMap?.Dispose(); runtimeFallbackMap = null; }
 
         private void Awake()
         {
@@ -68,11 +104,14 @@ namespace OverTheHorizon.Player.Input
         private void OnDisable()
         {
             actionMap?.Disable();
+            RawSnapshot = default;
+            discardNextLook = true;
         }
 
         private void ResolveActions()
         {
             IsReady = false;
+            runtimeFallbackMap?.Dispose();
             runtimeFallbackMap = null;
 
             if (inputActions != null)
@@ -199,25 +238,8 @@ namespace OverTheHorizon.Player.Input
                 actionMap.Enable();
         }
 
-        public ControlIntent ReadControlIntent()
-        {
-            if (!IsReady)
-                return default;
-
-            return new ControlIntent(
-                axialAction.ReadValue<float>(),
-                lateralAction.ReadValue<float>(),
-                verticalAction.ReadValue<float>(),
-                freeLookAction != null && freeLookAction.IsPressed(),
-                maneuverAction != null && maneuverAction.IsPressed());
-        }
-
-        public Vector2 ReadLookDelta()
-            => IsReady && lookAction != null
-                ? lookAction.ReadValue<Vector2>()
-                : Vector2.zero;
-
-        public bool ReadFreeLookHeld()
-            => IsReady && freeLookAction != null && freeLookAction.IsPressed();
+        public ControlIntent ReadControlIntent() => RawSnapshot.Valid ? RawSnapshot.Intent : default;
+        public Vector2 ReadLookDelta() => RawSnapshot.Valid ? RawSnapshot.LookDelta : Vector2.zero;
+        public bool ReadFreeLookHeld() => RawSnapshot.Valid && RawSnapshot.Intent.FreeLook;
     }
 }

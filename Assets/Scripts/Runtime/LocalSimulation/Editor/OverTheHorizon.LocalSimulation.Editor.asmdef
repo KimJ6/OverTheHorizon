@@ -1,0 +1,1 @@
+{"name":"OverTheHorizon.LocalSimulation.Editor","references":["OverTheHorizon.LocalSimulation","OverTheHorizon.Player","OverTheHorizon.Timing"],"includePlatforms":["Editor"]}

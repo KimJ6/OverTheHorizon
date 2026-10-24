@@ -1,4 +1,11 @@
 ﻿<Solution>
-  <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="OverTheHorizon.Player.csproj" />
+  <Project Path="OverTheHorizon.Simulation.csproj" />
+  <Project Path="OverTheHorizon.Timing.EditMode.csproj" />
+  <Project Path="OverTheHorizon.Timing.csproj" />
+  <Project Path="OverTheHorizon.LocalSimulation.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="OverTheHorizon.LocalSimulation.Editor.csproj" />
+  <Project Path="OverTheHorizon.Timing.PlayMode.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
 </Solution>

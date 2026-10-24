@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="39" result="Passed" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:41:01Z" duration="7.0138824">
+  <test-suite type="TestSuite" id="1049" name="OverTheHorizon" fullname="OverTheHorizon" runstate="Runnable" testcasecount="39" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:41:01Z" duration="7.013882" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1043" name="OverTheHorizon.Timing.PlayMode.dll" fullname="D:/MyWork/GitHub/Unity/OverTheHorizon/Library/ScriptAssemblies/OverTheHorizon.Timing.PlayMode.dll" runstate="Runnable" testcasecount="39" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:41:01Z" duration="6.993145" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="4556" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1044" name="OverTheHorizon" fullname="OverTheHorizon" runstate="Runnable" testcasecount="39" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:41:01Z" duration="6.990370" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1045" name="Tests" fullname="OverTheHorizon.Tests" runstate="Runnable" testcasecount="39" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:41:01Z" duration="6.988235" total="39" passed="39" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="LocalTimingLifecycleTests" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" testcasecount="36" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:40:56Z" duration="2.010905" total="36" passed="36" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1021" name="ChangedBodyBeforePreHookFaultsAndCanRestartWithOriginalBinding" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedBodyBeforePreHookFaultsAndCanRestartWithOriginalBinding" methodname="ChangedBodyBeforePreHookFaultsAndCanRestartWithOriginalBinding" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="898314166" result="Passed" start-time="2026-10-10 13:40:54Z" end-time="2026-10-10 13:40:55Z" duration="0.246589" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: Rigidbody expected TimingTestPlayer (#-1490), actual AlternateTimingBody (#-1510).
+]]></output>
+            </test-case>
+            <test-case id="1023" name="ChangedBodyBetweenFlightAndPostHookCannotPublishCompletion" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedBodyBetweenFlightAndPostHookCannotPublishCompletion" methodname="ChangedBodyBetweenFlightAndPostHookCannotPublishCompletion" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="733755468" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.048955" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: Rigidbody expected TimingTestPlayer (#-1516), actual AlternateTimingBody (#-1536).
+]]></output>
+            </test-case>
+            <test-case id="1022" name="ChangedBodyBetweenPreHookAndFlightCannotReceiveFlightCommands" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedBodyBetweenPreHookAndFlightCannotReceiveFlightCommands" methodname="ChangedBodyBetweenPreHookAndFlightCannotReceiveFlightCommands" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1889455723" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.040594" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Flight]: Registered Flight references were disabled, destroyed or replaced.
+]]></output>
+            </test-case>
+            <test-case id="1025" name="ChangedViewReaderAtPausedFaultsBeforeResumeArmsInput" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedViewReaderAtPausedFaultsBeforeResumeArmsInput" methodname="ChangedViewReaderAtPausedFaultsBeforeResumeArmsInput" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="553098247" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.048873" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: View.Reader expected TimingTestPlayer (#-1570), actual AlternateTimingReader (#-1588).
+]]></output>
+            </test-case>
+            <test-case id="1019" name="ChangedViewReaderFaultsBeforeCompletingAnotherTick" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedViewReaderFaultsBeforeCompletingAnotherTick" methodname="ChangedViewReaderFaultsBeforeCompletingAnotherTick" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="341601080" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.045970" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: View.Reader expected TimingTestPlayer (#-1596), actual AlternateTimingReader (#-1612).
+]]></output>
+            </test-case>
+            <test-case id="1018" name="ChangedViewReaderIsRejectedOnStoppedSessionStart" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ChangedViewReaderIsRejectedOnStoppedSessionStart" methodname="ChangedViewReaderIsRejectedOnStoppedSessionStart" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="2088654834" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.069593" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: View.Reader expected TimingTestPlayer (#-1622), actual AlternateTimingReader (#-1640).
+]]></output>
+            </test-case>
+            <test-case id="1014" name="CleanupFailureBlocksNewGenerationUntilExplicitRetrySucceeds" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.CleanupFailureBlocksNewGenerationUntilExplicitRetrySucceeds" methodname="CleanupFailureBlocksNewGenerationUntilExplicitRetrySucceeds" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="787799354" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.081008" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Session stop failed. (Injected cleanup failure.)
+Timing fault [Configuration]: Session stop failed. (Injected cleanup failure.)
+]]></output>
+            </test-case>
+            <test-case id="1026" name="DestroyedRootHandsCleanupToUpdateRecoveryWhileTimeIsZero" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DestroyedRootHandsCleanupToUpdateRecoveryWhileTimeIsZero" methodname="DestroyedRootHandsCleanupToUpdateRecoveryWhileTimeIsZero" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1527761474" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.050614" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing cleanup failed: One or more errors occurred. (Injected destruction cleanup failure.)
+Timing cleanup failed: One or more errors occurred. (Injected destruction cleanup failure.)
+]]></output>
+            </test-case>
+            <test-case id="1032" name="DestructionInsideCombatUpdateDefersReleaseUntilExecutionReturns" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DestructionInsideCombatUpdateDefersReleaseUntilExecutionReturns" methodname="DestructionInsideCombatUpdateDefersReleaseUntilExecutionReturns" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="854125957" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.027034" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing cleanup failed: One or more errors occurred. (A timing callback must return before final cleanup.)
+Timing cleanup failed: One or more errors occurred. (A timing callback must return before final cleanup.)
+]]></output>
+            </test-case>
+            <test-case id="1015" name="DisableCleanupFailureKeepsOwnershipAndPlayersQuarantined" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DisableCleanupFailureKeepsOwnershipAndPlayersQuarantined" methodname="DisableCleanupFailureKeepsOwnershipAndPlayersQuarantined" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="640662135" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.069855" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing cleanup failed: One or more errors occurred. (Injected disable cleanup failure.)
+]]></output>
+            </test-case>
+            <test-case id="1004" name="DisabledFlightFaultsWithoutCompletingAnotherTick" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DisabledFlightFaultsWithoutCompletingAnotherTick" methodname="DisabledFlightFaultsWithoutCompletingAnotherTick" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="347047091" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.067351" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: Flight is inactive or unmanaged.
+]]></output>
+            </test-case>
+            <test-case id="1024" name="DisabledReaderAtReadyIsAConfigurationFaultRatherThanInputWait" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DisabledReaderAtReadyIsAConfigurationFaultRatherThanInputWait" methodname="DisabledReaderAtReadyIsAConfigurationFaultRatherThanInputWait" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="856622075" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.027344" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: Reader, View or publisher is inactive or destroyed.
+]]></output>
+            </test-case>
+            <test-case id="1016" name="DisabledReaderPreservesUnconsumedEdgesUntilRestart" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.DisabledReaderPreservesUnconsumedEdgesUntilRestart" methodname="DisabledReaderPreservesUnconsumedEdgesUntilRestart" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="651961721" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.069784" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Player 1: Reader, View or publisher is inactive or destroyed.
+]]></output>
+            </test-case>
+            <test-case id="1010" name="ExecutionResourceFailureRollsBackAndPreservesGeneration" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ExecutionResourceFailureRollsBackAndPreservesGeneration" methodname="ExecutionResourceFailureRollsBackAndPreservesGeneration" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="520943161" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.030978" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Timing systems already exist in this World.
+]]></output>
+            </test-case>
+            <test-case id="1008" name="ExplicitRestartStartsWhenAutoStartIsDisabled" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ExplicitRestartStartsWhenAutoStartIsDisabled" methodname="ExplicitRestartStartsWhenAutoStartIsDisabled" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="99491257" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.029011" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1012" name="ExternalScaleChangeIsNotOverwrittenByFaultOrCleanup" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ExternalScaleChangeIsNotOverwrittenByFaultOrCleanup" methodname="ExternalScaleChangeIsNotOverwrittenByFaultOrCleanup" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="155308280" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:55Z" duration="0.047484" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Ownership]: Time.timeScale expected 1, actual 0.5. Another system may be changing global pause/time scale.
+]]></output>
+            </test-case>
+            <test-case id="1029" name="InvalidPausedLoopCannotResume" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.InvalidPausedLoopCannotResume" methodname="InvalidPausedLoopCannotResume" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="2061584274" result="Passed" start-time="2026-10-10 13:40:55Z" end-time="2026-10-10 13:40:56Z" duration="0.049228" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [HookOrder]: Required order is Pre, Script, Physics, Post in one FixedUpdate branch.
+]]></output>
+            </test-case>
+            <test-case id="1017" name="MismatchedViewReaderIsRejectedBeforeRegistration" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.MismatchedViewReaderIsRejectedBeforeRegistration" methodname="MismatchedViewReaderIsRejectedBeforeRegistration" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="554945838" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.025184" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Flight and View must use the same input reader.
+]]></output>
+            </test-case>
+            <test-case id="1013" name="OwnershipAcquisitionFailureCanBeExplicitlyRetried" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.OwnershipAcquisitionFailureCanBeExplicitlyRetried" methodname="OwnershipAcquisitionFailureCanBeExplicitlyRetried" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1345242574" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.026961" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Ownership]: Local timing already has an owner.
+]]></output>
+            </test-case>
+            <test-case id="1006" name="PartialPlayerValidationFailureCanBeRepairedWithoutPartialBindings" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.PartialPlayerValidationFailureCanBeRepairedWithoutPartialBindings" methodname="PartialPlayerValidationFailureCanBeRepairedWithoutPartialBindings" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="806600717" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.026705" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Configuration]: Players require an active Flight, dynamic Rigidbody, input and view.
+]]></output>
+            </test-case>
+            <test-case id="1002" name="PauseHoldsPoseAndCompletionThenResumeRequiresFreshInput" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.PauseHoldsPoseAndCompletionThenResumeRequiresFreshInput" methodname="PauseHoldsPoseAndCompletionThenResumeRequiresFreshInput" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="313857072" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.111749" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1031" name="PersistentDestroyedCleanupRetainsResourcesAndRejectsNewSession" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.PersistentDestroyedCleanupRetainsResourcesAndRejectsNewSession" methodname="PersistentDestroyedCleanupRetainsResourcesAndRejectsNewSession" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1510236795" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.052704" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing cleanup failed: One or more errors occurred. (Injected persistent cleanup failure.)
+Timing cleanup failed: One or more errors occurred. (Injected persistent cleanup failure.)
+Timing recovery pending: PreparationRollback: Injected persistent cleanup failure.
+Timing fault [Ownership]: Previous session cleanup is pending at PreparationRollback: PreparationRollback: Injected persistent cleanup failure.
+]]></output>
+            </test-case>
+            <test-case id="1028" name="ReadyAndPausedDoNotQueryPlayerLoopEveryFrame" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ReadyAndPausedDoNotQueryPlayerLoopEveryFrame" methodname="ReadyAndPausedDoNotQueryPlayerLoopEveryFrame" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="443388359" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.046450" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1030" name="RemovedRecoveryHookAfterHandoffStillDrainsWithoutNewRoot" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.RemovedRecoveryHookAfterHandoffStillDrainsWithoutNewRoot" methodname="RemovedRecoveryHookAfterHandoffStillDrainsWithoutNewRoot" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="494686291" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.050298" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing cleanup failed: One or more errors occurred. (Retained cleanup.)
+Timing cleanup failed: One or more errors occurred. (Retained cleanup.)
+]]></output>
+            </test-case>
+            <test-case id="1027" name="ReorderedPostCannotCompleteAnotherActualFixedStep" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.ReorderedPostCannotCompleteAnotherActualFixedStep" methodname="ReorderedPostCannotCompleteAnotherActualFixedStep" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="375167213" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.061649" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [HookOrder]: The post timing hook ran before the script and physics phases completed.
+]]></output>
+            </test-case>
+            <test-case id="1038" name="RepeatedOwnershipDoesNotAccumulateFixedStepDrift" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.RepeatedOwnershipDoesNotAccumulateFixedStepDrift" methodname="RepeatedOwnershipDoesNotAccumulateFixedStepDrift" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1405390916" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.005078" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1011" name="RepeatedRestartKeepsOriginalBaselineAndOneDriver" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.RepeatedRestartKeepsOriginalBaselineAndOneDriver" methodname="RepeatedRestartKeepsOriginalBaselineAndOneDriver" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="267343042" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.152392" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1003" name="RestartChangesGenerationAndTraceBeginsAtTickOne" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.RestartChangesGenerationAndTraceBeginsAtTickOne" methodname="RestartChangesGenerationAndTraceBeginsAtTickOne" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="750638618" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.088947" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1020" name="SecondPlayerInputFailureDoesNotReserveOrReleaseTheFirstPlayer" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.SecondPlayerInputFailureDoesNotReserveOrReleaseTheFirstPlayer" methodname="SecondPlayerInputFailureDoesNotReserveOrReleaseTheFirstPlayer" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="764622108" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.011808" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Input]: Discrete gameplay edges have no consumer in this implementation; refusing to drop or acknowledge them.
+]]></output>
+            </test-case>
+            <test-case id="1005" name="StopThenStartUsesNewGenerationAndOriginalPose" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.StopThenStartUsesNewGenerationAndOriginalPose" methodname="StopThenStartUsesNewGenerationAndOriginalPose" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1540252299" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.084178" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="StopWinsOverQueuedRestart" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.StopWinsOverQueuedRestart" methodname="StopWinsOverQueuedRestart" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="283798486" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.071600" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1037" name="TimingOwnerLeavesExternallyChangedFixedStepUntouched" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.TimingOwnerLeavesExternallyChangedFixedStepUntouched" methodname="TimingOwnerLeavesExternallyChangedFixedStepUntouched" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1409217499" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.005382" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1036" name="TimingOwnerUsesNativeReadbackAndRestoresGlobals" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.TimingOwnerUsesNativeReadbackAndRestoresGlobals" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.008432" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1033" name="TimingOwnerUsesNativeReadbackAndRestoresGlobals(50)" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.TimingOwnerUsesNativeReadbackAndRestoresGlobals(50)" methodname="TimingOwnerUsesNativeReadbackAndRestoresGlobals" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1915011732" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.002040" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1034" name="TimingOwnerUsesNativeReadbackAndRestoresGlobals(60)" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.TimingOwnerUsesNativeReadbackAndRestoresGlobals(60)" methodname="TimingOwnerUsesNativeReadbackAndRestoresGlobals" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="1548290886" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.000908" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="TimingOwnerUsesNativeReadbackAndRestoresGlobals(120)" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.TimingOwnerUsesNativeReadbackAndRestoresGlobals(120)" methodname="TimingOwnerUsesNativeReadbackAndRestoresGlobals" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="76854601" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.000742" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1009" name="UnsupportedEdgeSurvivesFaultUntilExplicitSessionCancellation" fullname="OverTheHorizon.Tests.LocalTimingLifecycleTests.UnsupportedEdgeSurvivesFaultUntilExplicitSessionCancellation" methodname="UnsupportedEdgeSurvivesFaultUntilExplicitSessionCancellation" classname="OverTheHorizon.Tests.LocalTimingLifecycleTests" runstate="Runnable" seed="292789974" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:56Z" duration="0.095643" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[Timing fault [Input]: Discrete gameplay edges have no consumer in this implementation; refusing to drop or acknowledge them.
+]]></output>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1039" name="TimingCostTests" fullname="OverTheHorizon.Tests.TimingCostTests" classname="OverTheHorizon.Tests.TimingCostTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:41:01Z" duration="4.973747" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1042" name="FourPlayersAt120Hz" fullname="OverTheHorizon.Tests.TimingCostTests.FourPlayersAt120Hz" methodname="FourPlayersAt120Hz" classname="OverTheHorizon.Tests.TimingCostTests" runstate="Runnable" seed="1593750963" result="Passed" start-time="2026-10-10 13:40:56Z" end-time="2026-10-10 13:40:57Z" duration="0.927507" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[TIMING_COST rate=120 players=4 steps=100 step_us=405.588 step_gc_allocations=0.0 frames=1264 frame_interval_us=644.494 frame_gc_bytes=420.6
+]]></output>
+            </test-case>
+            <test-case id="1040" name="FourPlayersAt50Hz" fullname="OverTheHorizon.Tests.TimingCostTests.FourPlayersAt50Hz" methodname="FourPlayersAt50Hz" classname="OverTheHorizon.Tests.TimingCostTests" runstate="Runnable" seed="1498063205" result="Passed" start-time="2026-10-10 13:40:57Z" end-time="2026-10-10 13:41:00Z" duration="2.203240" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[TIMING_COST rate=50 players=4 steps=100 step_us=385.833 step_gc_allocations=0.0 frames=3464 frame_interval_us=576.339 frame_gc_bytes=406.6
+]]></output>
+            </test-case>
+            <test-case id="1041" name="FourPlayersAt60Hz" fullname="OverTheHorizon.Tests.TimingCostTests.FourPlayersAt60Hz" methodname="FourPlayersAt60Hz" classname="OverTheHorizon.Tests.TimingCostTests" runstate="Runnable" seed="1709561998" result="Passed" start-time="2026-10-10 13:41:00Z" end-time="2026-10-10 13:41:01Z" duration="1.839653" asserts="0">
+              <properties>
+                <property name="_JOINTYPE" value="UnityCombinatorial" />
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+              <output><![CDATA[TIMING_COST rate=60 players=4 steps=100 step_us=435.195 step_gc_allocations=0.0 frames=2589 frame_interval_us=642.332 frame_gc_bytes=406.9
+Saving results to: C:/Users/User/AppData/LocalLow/DefaultCompany/OverTheHorizon\TestResults.xml
+]]></output>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

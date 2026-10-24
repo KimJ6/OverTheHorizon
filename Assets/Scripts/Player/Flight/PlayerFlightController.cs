@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using OverTheHorizon.Timing;
 using OverTheHorizon.Player.Input;
 using OverTheHorizon.Player.View;
 
@@ -60,6 +62,23 @@ namespace OverTheHorizon.Player.Flight
         private FlightTelemetry telemetry;
         private bool runtimeStateInitialized;
 
+        private bool managed, managedEnabled, stepPrepared;
+        private Rigidbody managedBody;
+        private PlayerInputReader managedReader;
+        private PlayerViewState managedView;
+        private uint managedPlayerId;
+        private Action<uint, string> failureSink;
+        private SimulationStepContext preparedContext;
+        private PlayerControlSnapshot preparedControl;
+        private Vector3 preparedGravity;
+        private FlightSettings managedSettings;
+        private int settingsVersion;
+        public ulong AppliedGeneration { get; private set; }
+        public ulong AppliedOrdinal { get; private set; }
+        public Rigidbody Body => body;
+        public PlayerInputReader InputReader => inputReader;
+        public PlayerViewState ViewState => viewState;
+        public bool IsManaged => managed;
         public FlightTelemetry Telemetry => telemetry;
         public Vector3 CurrentVelocity => body != null ? body.linearVelocity : Vector3.zero;
         public float CurrentSpeed => CurrentVelocity.magnitude;
@@ -90,6 +109,7 @@ namespace OverTheHorizon.Player.Flight
 
         private void OnEnable()
         {
+            if (managed) { SetManagedExecutionEnabled(false); return; }
             if (body == null)
                 return;
 
@@ -120,12 +140,16 @@ namespace OverTheHorizon.Player.Flight
         /// </summary>
         public void ResetFlightState(Vector3 controlledVelocity, Vector3 gravityVelocity)
         {
+            if (managedEnabled || stepPrepared) throw new InvalidOperationException("Suspend managed execution before resetting Flight.");
+            if (managed) ValidateManagedReferences();
+            if (!PlayerValueValidation.Finite(controlledVelocity) || !PlayerValueValidation.Finite(gravityVelocity))
+                throw new InvalidOperationException("Flight initial velocity must be finite.");
             if (body == null)
                 return;
 
             ConfigureRigidbody();
             InitializeRuntimeState(controlledVelocity, gravityVelocity);
-            body.linearVelocity = motionState.Result;
+            if (!body.isKinematic) body.linearVelocity = motionState.Result;
         }
 
         private void InitializeRuntimeState(
@@ -167,37 +191,146 @@ namespace OverTheHorizon.Player.Flight
                 false);
         }
 
+        public void BindManaged(uint playerId, Action<uint, string> onFailure)
+        {
+            ValidateManagedBinding(playerId);
+            if (onFailure == null) throw new ArgumentNullException(nameof(onFailure));
+            int nextVersion = checked(settingsVersion + 1);
+            FlightSettings original = BuildSettings();
+            AnimationCurve curve = original.Gravity.SupportByPropulsionAuthority;
+            AnimationCurve owned = curve == null ? null : new AnimationCurve(curve.keys)
+                { preWrapMode = curve.preWrapMode, postWrapMode = curve.postWrapMode };
+            var settings = new FlightSettings(original.Attitude, original.Motion,
+                new GravitySupportSettings(original.Gravity.GravityScale, original.Gravity.GravityRecoveryAcceleration, owned));
+            // All validation/allocation precedes the ownership change.
+            managed = true; managedEnabled = stepPrepared = false; managedPlayerId = playerId;
+            failureSink = onFailure; AppliedGeneration = AppliedOrdinal = 0;
+            managedBody = body; managedReader = inputReader; managedView = viewState;
+            settingsVersion = nextVersion; managedSettings = settings;
+        }
+        public void ValidateManagedBinding(uint playerId)
+        {
+            if (managed || managedEnabled || stepPrepared || playerId == 0 || body == null || inputReader == null || viewState == null)
+                throw new InvalidOperationException("An unbound Flight with prepared references is required.");
+            ValidateManagedSettings();
+        }
+        private void ValidateManagedSettings()
+        {
+            if (!PlayerValueValidation.Finite(baseBodyTurnSpeedDegPerSec) || !PlayerValueValidation.Finite(maxControlledSpeed)
+                || !PlayerValueValidation.Finite(moveAcceleration) || !PlayerValueValidation.Finite(coastDeceleration)
+                || !PlayerValueValidation.Finite(inputAxisDeadZone) || !PlayerValueValidation.Finite(commandActivateThreshold)
+                || !PlayerValueValidation.Finite(commandDeactivateThreshold) || !PlayerValueValidation.Finite(propulsionAuthorityReleaseRate)
+                || !PlayerValueValidation.Finite(gravityScale) || !PlayerValueValidation.Finite(gravityRecoveryAcceleration))
+                throw new InvalidOperationException("Flight settings must be finite.");
+            if (gravitySupportByAuthority != null) foreach (var key in gravitySupportByAuthority.keys)
+                if (!PlayerValueValidation.Finite(key.time) || !PlayerValueValidation.Finite(key.value)
+                    || float.IsNaN(key.inTangent) || float.IsNaN(key.outTangent)
+                    || !PlayerValueValidation.Finite(key.inWeight) || !PlayerValueValidation.Finite(key.outWeight))
+                    throw new InvalidOperationException("Gravity support curve contains invalid keys.");
+        }
+        public void SetManagedExecutionEnabled(bool enabled)
+        { managedEnabled = enabled; if (!enabled) stepPrepared = false; }
+        public void UnbindManaged()
+        { managed = managedEnabled = stepPrepared = false; failureSink = null; managedBody = null; managedReader = null; managedView = null; }
+        public void DetachManagedFailureSink()
+        { SetManagedExecutionEnabled(false); failureSink = null; }
+        public void ValidateManagedReferences()
+        {
+            if (!managed || managedBody == null || managedReader == null || managedView == null
+                || body != managedBody || inputReader != managedReader || viewState != managedView
+                || !isActiveAndEnabled || !managedReader.isActiveAndEnabled || !managedView.isActiveAndEnabled
+                || managedView.InputReader != managedReader)
+                throw new InvalidOperationException("Registered Flight references were disabled, destroyed or replaced.");
+        }
+        public void PrepareStep(SimulationStepContext context, PlayerControlSnapshot control, Vector3 gravity)
+        {
+            ValidateManagedReferences();
+            if (!managed || !managedEnabled || stepPrepared || !control.Valid || control.PlayerId != managedPlayerId
+                || context.Generation != control.Generation || !PlayerValueValidation.Finite(gravity)
+                || (AppliedGeneration == context.Generation && AppliedOrdinal >= context.Ordinal))
+                throw new InvalidOperationException("Invalid or duplicate Flight step preparation.");
+            preparedContext = context; preparedControl = control; preparedGravity = gravity; stepPrepared = true;
+        }
+        public FlightRuntimeSnapshot CaptureFlightState() => new FlightRuntimeSnapshot(motionState, settingsVersion);
+        public void RestoreFlightState(FlightRuntimeSnapshot snapshot)
+        {
+            if (managedEnabled || stepPrepared || snapshot.SettingsVersion != settingsVersion)
+                throw new InvalidOperationException("Flight restore requires suspension and matching settings.");
+            snapshot.RestoreTo(motionState);
+            runtimeStateInitialized = true;
+        }
+        public readonly struct PreparationState
+        {
+            internal readonly FlightRuntimeSnapshot Motion;
+            internal readonly FlightTelemetry Telemetry;
+            internal readonly ControlIntent Intent;
+            internal readonly bool Initialized;
+            internal readonly ulong Generation, Ordinal;
+            internal PreparationState(PlayerFlightController flight)
+            {
+                Motion = flight.CaptureFlightState(); Telemetry = flight.telemetry; Intent = flight.latestIntent;
+                Initialized = flight.runtimeStateInitialized; Generation = flight.AppliedGeneration; Ordinal = flight.AppliedOrdinal;
+            }
+        }
+        public PreparationState CapturePreparationState() => new PreparationState(this);
+        public void RestorePreparationState(PreparationState state)
+        {
+            if (managedEnabled || stepPrepared || (managed && state.Motion.SettingsVersion != settingsVersion))
+                throw new InvalidOperationException("Preparation rollback requires suspended execution and unchanged managed settings.");
+            state.Motion.RestoreTo(motionState); settingsVersion = state.Motion.SettingsVersion;
+            telemetry = state.Telemetry; latestIntent = state.Intent; runtimeStateInitialized = state.Initialized;
+            AppliedGeneration = state.Generation; AppliedOrdinal = state.Ordinal;
+        }
         private void FixedUpdate()
         {
-            if (body == null || inputReader == null)
+            if (managed)
+            {
+                if (!managedEnabled) return;
+                if (!stepPrepared) { failureSink?.Invoke(managedPlayerId, "Flight has no reserved input."); return; }
+                stepPrepared = false;
+                try
+                {
+                    ValidateManagedReferences();
+                    ExecuteFlightStep(managedBody, preparedContext.DeltaTime, managedSettings, preparedControl.Intent,
+                        preparedControl.SteeringForward, preparedControl.SteeringRight, preparedControl.SteeringRotation,
+                        preparedControl.ViewForward, preparedControl.Intent.FreeLook, preparedControl.Recentering, preparedGravity);
+                    if (!PlayerValueValidation.Finite(managedBody.linearVelocity) || !PlayerValueValidation.Finite(managedBody.rotation))
+                        throw new InvalidOperationException("Non-finite Flight result.");
+                    AppliedGeneration = preparedContext.Generation; AppliedOrdinal = preparedContext.Ordinal;
+                }
+                catch (Exception ex) { failureSink?.Invoke(managedPlayerId, ex.Message); }
+                return;
+            }
+            if (body == null || inputReader == null) return;
+            ExecuteFlightStep(body, Time.fixedDeltaTime, BuildSettings(), inputReader.ReadControlIntent(), ResolveSteeringForward(),
+                ResolveSteeringRight(), viewState != null ? viewState.DesiredBodyFacing : body.rotation,
+                ResolveCameraForward(), viewState != null && viewState.IsFreeLook,
+                viewState != null && viewState.IsCameraRecentering, Physics.gravity);
+        }
+        private void ExecuteFlightStep(Rigidbody stepBody, float dt, FlightSettings settings, ControlIntent intent,
+            Vector3 steeringForward, Vector3 steeringRight, Quaternion desiredBodyFacing,
+            Vector3 cameraForward, bool freeLook, bool recentering, Vector3 gravity)
+        {
+            if (stepBody == null)
                 return;
 
-            float dt = Time.fixedDeltaTime;
-            FlightSettings settings = BuildSettings();
-            latestIntent = inputReader.ReadControlIntent();
-
-            Vector3 steeringForward = ResolveSteeringForward();
-            Vector3 steeringRight = ResolveSteeringRight();
+            latestIntent = intent;
             Vector3 worldUp = Vector3.up;
 
-            Quaternion desiredBodyFacing = viewState != null
-                ? viewState.DesiredBodyFacing
-                : body.rotation;
-
             AttitudeResult attitude = AttitudeSolver.Solve(
-                body.rotation,
+                stepBody.rotation,
                 desiredBodyFacing,
                 settings.Attitude,
                 dt);
 
             if (settings.Attitude.ClearAngularVelocityWhileControlled)
-                body.angularVelocity = Vector3.zero;
+                stepBody.angularVelocity = Vector3.zero;
 
-            // Project invariant: PlayerFlightController is the sole Rigidbody rotation writer.
-            body.MoveRotation(attitude.Rotation);
+            // During a running step Flight owns rotation; lifecycle suspension may restore/freeze the pose.
+            stepBody.MoveRotation(attitude.Rotation);
 
             Vector3 expectedBeforeStep = motionState.Result;
-            Vector3 actualBeforeStep = body.linearVelocity;
+            Vector3 actualBeforeStep = stepBody.linearVelocity;
 
             // 충돌/넉백/다른 물리 영향으로 Flight Core 예상값과 실제 Rigidbody가 달라졌는지 관측한다.
             // 현재 baseline에서는 이 residual을 Telemetry에만 남기고 다음 줄의 system velocity로 덮어쓴다.
@@ -215,15 +348,14 @@ namespace OverTheHorizon.Player.Flight
 
             GravitySupportStepResult gravityStep = GravitySupportSolver.Step(
                 motionState,
-                Physics.gravity,
+                gravity,
                 settings.Gravity,
                 dt);
             // Prototype contract: collision/knockback ownership은 아직 별도 채널로 모델링하지 않는다.
             // 따라서 현재 Flight Core가 소유한 Controlled + Gravity 상태를 그대로 Rigidbody에 쓴다.
-            body.linearVelocity = motionState.Result;
+            stepBody.linearVelocity = motionState.Result;
 
             Vector3 bodyForward = attitude.Forward;
-            Vector3 cameraForward = ResolveCameraForward();
 
             telemetry = new FlightTelemetry(
                 ResolvePhase(motionState, gravityStep.Support),
@@ -240,8 +372,8 @@ namespace OverTheHorizon.Player.Flight
                 settings.Motion.MaxControlledSpeed,
                 gravityStep.Support,
                 attitude.SeparationDegrees,
-                viewState != null && viewState.IsFreeLook,
-                viewState != null && viewState.IsCameraRecentering,
+                freeLook,
+                recentering,
                 latestIntent.Maneuver);
         }
 

@@ -1,0 +1,13 @@
+{
+  "name": "OverTheHorizon.LocalSimulation",
+  "rootNamespace": "OverTheHorizon.LocalSimulation",
+  "references": [
+    "OverTheHorizon.Timing",
+    "OverTheHorizon.Player",
+    "OverTheHorizon.Simulation",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics",
+    "Unity.InputSystem"
+  ]
+}
