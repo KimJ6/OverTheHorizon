@@ -2,8 +2,10 @@
   <Project Path="OverTheHorizon.Player.csproj" />
   <Project Path="OverTheHorizon.Simulation.csproj" />
   <Project Path="OverTheHorizon.Timing.EditMode.csproj" />
+  <Project Path="OverTheHorizon.Combat.Missiles.csproj" />
   <Project Path="OverTheHorizon.Timing.csproj" />
   <Project Path="OverTheHorizon.LocalSimulation.csproj" />
+  <Project Path="OverTheHorizon.LocalCombatMissiles.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="OverTheHorizon.LocalSimulation.Editor.csproj" />
   <Project Path="OverTheHorizon.Timing.PlayMode.csproj" />

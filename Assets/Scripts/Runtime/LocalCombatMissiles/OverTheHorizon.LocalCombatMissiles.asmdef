@@ -1,0 +1,13 @@
+{
+  "name": "OverTheHorizon.LocalCombatMissiles",
+  "rootNamespace": "OverTheHorizon.LocalCombatMissiles",
+  "references": [
+    "OverTheHorizon.Combat.Missiles",
+    "OverTheHorizon.LocalSimulation",
+    "OverTheHorizon.Simulation",
+    "OverTheHorizon.Timing",
+    "Unity.Entities",
+    "Unity.Collections",
+    "Unity.Mathematics"
+  ]
+}

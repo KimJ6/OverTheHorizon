@@ -15,6 +15,8 @@ using OverTheHorizon.Player.Flight;
 using OverTheHorizon.Player.Input;
 using OverTheHorizon.Player.View;
 using OverTheHorizon.LocalSimulation;
+using OverTheHorizon.LocalCombatMissiles;
+using OverTheHorizon.Combat.Missiles;
 using OverTheHorizon.Timing;
 using OverTheHorizon.Simulation;
 
@@ -722,6 +724,30 @@ namespace OverTheHorizon.Tests
             Assert.IsTrue(producer.EcsDependencyCompletedBeforeRelease);
             Assert.IsTrue(producer.ExternalJobCompletedBeforeRelease);
             Assert.IsTrue(producer.ResultEntityReleasedAfterDependencyCompletion);
+        }
+        [UnityTest] public IEnumerator MissileInstallerRegistersNoOpStagesForEachSessionWithoutDuplicates()
+        {
+            CreateSession(false);
+            rootObject.AddComponent<LocalMissileCombatInstaller>();
+            yield return Until(() => root.State == SimulationLifecycle.Ready);
+
+            var first = (CombatStepExecutor)GetField("executor");
+            Assert.IsNotNull(first.World.GetExistingSystemManaged<MissilePlanAndCommandStage>());
+            Assert.IsNotNull(first.World.GetExistingSystemManaged<MissileSpawnAndCommandCommitStage>());
+            Assert.IsNotNull(first.World.GetExistingSystemManaged<MissileMovementStage>());
+            Assert.IsNotNull(first.World.GetExistingSystemManaged<MissileContactGatherStage>());
+            Assert.IsNotNull(first.World.GetExistingSystemManaged<MissileOutcomeAndLifecycleStage>());
+
+            root.RequestStart();
+            yield return Until(() => root.CompletedOrdinal >= 1);
+            ulong firstGeneration = root.Generation;
+            root.RequestRestart();
+            yield return Until(() => root.Generation > firstGeneration && root.CompletedOrdinal >= 1);
+
+            var second = (CombatStepExecutor)GetField("executor");
+            Assert.AreNotSame(first, second);
+            Assert.IsNotNull(second.World.GetExistingSystemManaged<MissilePlanAndCommandStage>());
+            Assert.IsNotNull(second.World.GetExistingSystemManaged<MissileOutcomeAndLifecycleStage>());
         }
         [TestCase(50)] [TestCase(60)] [TestCase(120)]
         public void TimingOwnerUsesNativeReadbackAndRestoresGlobals(int rate)

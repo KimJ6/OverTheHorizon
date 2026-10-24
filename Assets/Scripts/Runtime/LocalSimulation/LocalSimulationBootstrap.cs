@@ -27,6 +27,7 @@ namespace OverTheHorizon.LocalSimulation
             public PlayerInputReader Reader;
             public PlayerViewState View;
             public PlayerControlSnapshotPublisher Input;
+            public PlayerCombatBoundsProvider CombatBounds;
             public PlayerPhysicsSuspension Suspension;
             public PlayerKinematicState Initial, Completed;
             public FlightRuntimeSnapshot InitialFlight;
@@ -372,6 +373,7 @@ namespace OverTheHorizon.LocalSimulation
                 CombatStepExecutor retained = null;
                 try { CombatStepExecutor.Create(world, nextGeneration, config, out retained); }
                 finally { executor = retained; }
+                executor.World.EntityManager.AddBuffer<PlayerCombatBoundsStepElement>(executor.SessionEntity);
                 ConfigureExecution?.Invoke(executor);
                 executor.Seal();
                 driver = new LocalFixedStepDriver(PrePhysics, PostPhysics);
@@ -420,6 +422,7 @@ namespace OverTheHorizon.LocalSimulation
                     if (candidates[j].Flight.Body == flight.Body || candidates[j].Reader == flight.InputReader || candidates[j].View == flight.ViewState)
                         throw new InvalidOperationException("Player body, input and view bindings must be unique.");
                 candidates[i] = new Binding { Id = (uint)(i + 1), Flight = flight, Reader = flight.InputReader,
+                    CombatBounds = flight.GetComponent<PlayerCombatBoundsProvider>(),
                     View = flight.ViewState, OriginalInputEnabled = flight.InputReader.GameplayInputEnabled,
                     OriginalViewEnabled = flight.ViewState.GameplayViewEnabled };
             }
@@ -547,6 +550,11 @@ namespace OverTheHorizon.LocalSimulation
                 stage = SimulationFaultCode.Snapshot;
                 for (int i = 0; i < bindings.Length; ++i)
                     frame[i] = bindings[i].CaptureStepFrame(current, stepGravity);
+                var combatBounds = executor.World.EntityManager.GetBuffer<PlayerCombatBoundsStepElement>(executor.SessionEntity);
+                combatBounds.Clear();
+                for (int i = 0; i < bindings.Length; ++i)
+                    if (bindings[i].CombatBounds != null && bindings[i].CombatBounds.TryBuild(frame[i], out var bounds))
+                        combatBounds.Add(bounds);
                 stage = SimulationFaultCode.Ecs;
                 executor.Execute(current, frame, progress);
                 // Destruction inside group.Update quarantines the session and defers release.

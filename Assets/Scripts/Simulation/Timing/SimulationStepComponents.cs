@@ -30,6 +30,20 @@ namespace OverTheHorizon.Simulation
         public float LogicalYaw, LogicalPitch;
         public byte FreeLook, Maneuver;
     }
+
+    /// <summary>
+    /// Host-authored combat volume for one canonical player frame. The provider resolves
+    /// any local offset before this boundary, so combat systems never read a Transform or Collider.
+    /// </summary>
+    [InternalBufferCapacity(4)]
+    public struct PlayerCombatBoundsStepElement : IBufferElementData
+    {
+        public byte Valid;
+        public uint PlayerId, SlotGeneration;
+        public ulong Generation, Ordinal;
+        public float3 StartCenter, EndCenter;
+        public float Radius;
+    }
     public static class StepComponentUtility
     {
         public static void Mark(EntityManager manager, Entity entity, uint bit)

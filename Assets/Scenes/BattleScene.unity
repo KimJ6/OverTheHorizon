@@ -471,6 +471,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1082398521}
   - component: {fileID: 1082398520}
+  - component: {fileID: 1082398522}
+  - component: {fileID: 1082398523}
   m_Layer: 0
   m_Name: LocalSimulationRoot
   m_TagString: Untagged
@@ -496,7 +498,7 @@ MonoBehaviour:
   cameras:
   - {fileID: 330585548}
   autoStart: 1
-  pauseOnFocusLost: 1
+  pauseOnFocusLost: 0
 --- !u!4 &1082398521
 Transform:
   m_ObjectHideFlags: 0
@@ -512,6 +514,45 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1082398522
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082398519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c91e84515229a6409d7e723ef656a50, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OverTheHorizon.LocalCombatMissiles::OverTheHorizon.LocalCombatMissiles.LocalMissileCombatInstaller
+--- !u!114 &1082398523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082398519}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83dd7266e4cb1014782cd47e54e06f08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OverTheHorizon.LocalCombatMissiles::OverTheHorizon.LocalCombatMissiles.MissileFlightDemoFixture
+  memberCount: 50
+  cellCount: 4
+  launchDelaySeconds: 0.04
+  drawDebug: 1
+  maximumDrawnMembers: 64
+  observationEmitterPosition: {x: 0, y: 30, z: -150}
+  drawTrails: 1
+  trailDurationSeconds: 6
+  trailSampleIntervalSeconds: 0.04
+  maximumTrailPoints: 55000
+  collectPatternDiagnostics: 1
+  maximumDiagnosticMembers: 300
+  diagnosticHistoryDurationSeconds: 6
+  diagnosticSampleIntervalSeconds: 0.04
+  maximumDiagnosticHistoryRecords: 60000
 --- !u!1 &1245443684
 GameObject:
   m_ObjectHideFlags: 0
@@ -531,6 +572,7 @@ GameObject:
   - component: {fileID: 1245443691}
   - component: {fileID: 1245443690}
   - component: {fileID: 1245443695}
+  - component: {fileID: 1245443696}
   m_Layer: 0
   m_Name: Proto_Player
   m_TagString: Untagged
@@ -826,6 +868,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6446f39c2cf5246b09a53416ecf6e62, type: 3}
   m_Name: 
   m_EditorClassIdentifier: OverTheHorizon.LocalSimulation::OverTheHorizon.LocalSimulation.PlayerControlSnapshotPublisher
+--- !u!114 &1245443696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1245443684}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20bcf321ab9d0954c890126df0bc17a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: OverTheHorizon.LocalSimulation::OverTheHorizon.LocalSimulation.PlayerCombatBoundsProvider
+  localCenter: {x: 0, y: 0, z: 0}
+  radius: 0.9
 --- !u!1 &1543210142
 GameObject:
   m_ObjectHideFlags: 0
@@ -881,6 +937,59 @@ MonoBehaviour:
   zAxisColor: {r: 0.25, g: 0.55, b: 1, a: 0.95}
   drawMinorLines: 1
   followTargetOnY: 1
+--- !u!1 &2121825136
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2121825138}
+  - component: {fileID: 2121825137}
+  m_Layer: 0
+  m_Name: Missile Observation Support
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!65 &2121825137
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2121825136}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 400, y: 1, z: 400}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &2121825138
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2121825136}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -891,3 +1000,4 @@ SceneRoots:
   - {fileID: 1245443688}
   - {fileID: 1543210143}
   - {fileID: 1082398521}
+  - {fileID: 2121825138}
